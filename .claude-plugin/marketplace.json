@@ -1,0 +1,14 @@
+{
+  "name": "awesome-hud",
+  "description": "awesome-hud, a Claude Code mod: animated pixel mascots, themed sounds and a status bar under the prompt",
+  "owner": {
+    "name": "cosmos-127"
+  },
+  "plugins": [
+    {
+      "name": "awesome-hud",
+      "source": "./",
+      "description": "Animated pixel mascots under the prompt that react to what Claude is doing, with themed sounds and a compact status bar"
+    }
+  ]
+}

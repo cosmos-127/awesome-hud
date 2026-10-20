@@ -1,0 +1,56 @@
+{
+  "name": "awesome-hud",
+  "version": "0.1.0",
+  "description": "Animated pixel mascots under the prompt that react to what Claude is doing, with themed sounds and a compact status bar",
+  "author": {
+    "name": "cosmos-127",
+    "url": "https://github.com/cosmos-127"
+  },
+  "homepage": "https://github.com/cosmos-127/awesome-hud",
+  "repository": "https://github.com/cosmos-127/awesome-hud",
+  "license": "MIT",
+  "keywords": ["hud", "statusline", "pixel-art", "ascii-art", "themes", "sounds"],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "theme": {
+      "type": "string",
+      "title": "Theme",
+      "description": "Who sits by the prompt: cat, an orange cat with opinions; chibi, big eyes and anime feelings; got, a direwolf of the North. /awesome-hud <theme> sets this too.",
+      "default": "cat",
+      "options": ["cat", "chibi", "got"]
+    },
+    "position": {
+      "type": "string",
+      "title": "Position",
+      "description": "below draws the mascot and status bar under the prompt, after Claude Code's hint line; above draws them over the prompt, where they make way for Claude Code's surveys.",
+      "default": "below",
+      "options": ["below", "above"]
+    },
+    "layout": {
+      "type": "string",
+      "title": "Layout",
+      "description": "full draws the mascot beside five rows of stats; compact draws the stats alone on two lines, with no mascot.",
+      "default": "full",
+      "options": ["full", "compact"]
+    },
+    "sounds": {
+      "type": "boolean",
+      "title": "Sounds",
+      "description": "A short theme sound when Claude finishes a turn of 30 seconds or more, hits an error, needs your OK, or a party starts. macOS plays it through Claude Code; Linux needs pw-play, paplay or aplay.",
+      "default": true
+    },
+    "cost": {
+      "type": "string",
+      "title": "Session cost",
+      "description": "auto shows the cost off a Pro or Max plan and hides it on one, where it is an API-price estimate rather than a bill; show and hide decide for you.",
+      "default": "auto",
+      "options": ["auto", "show", "hide"]
+    },
+    "flavorText": {
+      "type": "boolean",
+      "title": "Themed words",
+      "description": "Theme words in Claude Code's own spinner and turn-closing line, and a toast when tests pass or a commit or push lands. Off, only the band is themed.",
+      "default": true
+    }
+  }
+}
