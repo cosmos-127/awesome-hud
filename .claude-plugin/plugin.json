@@ -1,6 +1,6 @@
 {
   "name": "awesome-hud",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Animated pixel mascots under the prompt that react to what Claude is doing, with themed sounds and a compact status bar",
   "author": {
     "name": "cosmos-127",
@@ -51,6 +51,12 @@
       "title": "Themed words",
       "description": "Theme words in Claude Code's own spinner and turn-closing line, and a toast when tests pass or a commit or push lands. Off, only the band is themed.",
       "default": true
+    },
+    "prStatus": {
+      "type": "boolean",
+      "title": "PR status",
+      "description": "The branch's pull request beside its git state, with its checks and review, from GitHub's CLI (gh pr view): after a push, and every five minutes while you are about. Off, the band names a pull request only once Claude opens or changes one. The one part of the mod that uses the network.",
+      "default": false
     }
   }
 }
