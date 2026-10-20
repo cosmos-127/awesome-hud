@@ -9,7 +9,7 @@
   "homepage": "https://github.com/cosmos-127/awesome-hud",
   "repository": "https://github.com/cosmos-127/awesome-hud",
   "license": "MIT",
-  "keywords": ["hud", "statusline", "pixel-art", "ascii-art", "themes", "sounds"],
+  "keywords": ["claude-code", "claude-code-plugin", "hud", "statusline", "pixel-art", "ascii-art", "themes", "sounds", "terminal"],
   "types": "./types/index.d.ts",
   "userConfig": {
     "theme": {
