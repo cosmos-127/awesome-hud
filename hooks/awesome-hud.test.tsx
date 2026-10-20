@@ -3,7 +3,7 @@ import { expect, mock, test } from 'claude-code/testing'
 
 import type { Git } from '../types'
 import {
-  branchSegments, cells, costOf, fit, gauge, headOf, limitLabel, middle, parseStatus, partyOf, prettyModel, resetTime, shortTool, targetOf, testsOf, treeSegments,
+  branchSegments, cells, costOf, fit, gauge, headOf, isMiss, limitLabel, middle, parseStatus, partyOf, prettyModel, resetTime, shortTool, targetOf, testSegment, testsOf, treeSegments,
   turnsLeft,
 } from './format'
 import type { Segment } from './format'
@@ -46,8 +46,11 @@ type RepoMock = {
   files?: Record<string, string>
   /** Modification times by path, for the files git writes. */
   times?: Record<string, number>
-  gh?: string
+  /** What `gh pr view` prints; a function for an answer that comes later. */
+  gh?: string | (() => Promise<string>)
   env?: Record<string, string>
+  /** False while the folder is no repository yet: rev-parse fails. */
+  isRepo?: () => boolean
 }
 
 // `a/b/../c` as `a/c`.
@@ -65,6 +68,7 @@ const linuxHost = (on: On, repo?: RepoMock) => {
     ran.push([...e.argv])
     if (e.argv[0] === 'uname') return out('Linux\n')
     if (e.argv[0] === 'git' && repo) {
+      if (e.argv.includes('rev-parse') && repo.isRepo?.() === false) return out('', 128)
       if (e.argv.includes('rev-parse')) return out(`${repo.gitDir ?? '/p/.git'}\n${repo.top ?? '/p'}\n`)
       if (e.argv.includes('status')) {
         const status = typeof repo.status === 'function' ? repo.status() : (repo.status ?? STATUS('main'))
@@ -72,7 +76,7 @@ const linuxHost = (on: On, repo?: RepoMock) => {
       }
       if (e.argv.includes('rev-list')) return out('0\n')
     }
-    if (e.argv[0] === 'gh' && repo?.gh !== undefined) return out(repo.gh)
+    if (e.argv[0] === 'gh' && repo?.gh !== undefined) return typeof repo.gh === 'string' ? out(repo.gh) : repo.gh().then(stdout => out(stdout))
     if (e.argv[0] !== 'pw-play') return out('', 128)
     if (e.argv[1] !== '--version') played.push([...e.argv])
     return out('')
@@ -147,10 +151,12 @@ test('every frame of every theme is a full grid of known pixels', async () => {
   }
 })
 
-test('every theme has a banner that fits and a sound for every event, and none is named files', async () => {
+test('at rest every theme draws beside its face, so no gap opens between the mascot and the stats', async () => {
+  for (const t of Object.values(THEMES)) expect(t.moods.idle[0]!.px.some(row => /[^.]/.test(row.slice(14)))).toBe(true)
+})
+
+test('every theme has a sound for every event, and none is named files', async () => {
   for (const [name, t] of Object.entries(THEMES)) {
-    expect(t.banner.length).toBeGreaterThan(0)
-    expect(Math.max(...t.banner.map(row => row.length))).toBeLessThanOrEqual(48)
     expect(Object.keys(t.sounds).sort()).toEqual(['done', 'error', 'party', 'waiting'])
     for (const path of Object.values(t.sounds)) expect(path).toMatch(new RegExp(`^sounds/${name}/[a-z]+\\.wav$`))
   }
@@ -203,6 +209,8 @@ test('one error sound a turn, and none for a party turn, a quick turn or an inte
   await $.tool.check({ tool: 'Bash', input: { command: 'rm -rf build' } })
   const question = { question: 'Which?', header: 'Pick', options: [{ label: 'a', description: 'A' }, { label: 'b', description: 'B' }], multiSelect: false }
   await $.tool.call({ tool: 'AskUserQuestion', questions: [question] })
+  // The question's own permission check plays no second sound.
+  await $.tool.check({ tool: 'AskUserQuestion', input: { questions: [question] } })
   expect(await heard()).toEqual(['waiting', 'waiting'])
 })
 
@@ -372,7 +380,7 @@ test("a subagent's test run is the band's last run, with no party", async ($, on
   await clock.advance(0)
   expect([toasts, played]).toEqual([[], []])
   const band = await $.ui.mount(HINT)
-  expect(await band.find({ type: 'Text', text: /^✓ 5 passed · 0m ago$/ })).toBeDefined()
+  expect(await band.find({ type: 'Text', text: /^✓ 5 passed \(0m ago\)$/ })).toBeDefined()
   await band.unmount()
 })
 
@@ -387,7 +395,7 @@ test('a test run too long to show Claude is read from the output Claude Code kep
   on('tool.call', () => ({ isError: true, result: kept, text: 'Output too large, saved to /tmp/out.txt. Preview:\nPASS src/a.test.ts\n' }))
   await $.tool.call({ tool: 'Bash', command: 'npm test' })
   const band = await $.ui.mount(HINT)
-  expect(await band.find({ type: 'Text', text: /^✗ 1 failed · 0m ago$/ })).toBeDefined()
+  expect(await band.find({ type: 'Text', text: /^✗ 1 failed \(0m ago\)$/ })).toBeDefined()
   await band.unmount()
 })
 
@@ -401,7 +409,7 @@ test('the same test command run again says what it failed before', async ($, on)
   // The same run, read through tail.
   await $.tool.call({ tool: 'Bash', command: 'npm test 2>&1 | tail -20' })
   const band = await $.ui.mount(HINT)
-  expect(await band.find({ type: 'Text', text: /^✗ 2 failed \(was 5\) · 0m ago$/ })).toBeDefined()
+  expect(await band.find({ type: 'Text', text: /^✗ 2 failed \(was 5, 0m ago\)$/ })).toBeDefined()
   await band.unmount()
 })
 
@@ -425,7 +433,7 @@ test('the compact layout puts the branch after the folder', { options: { layout:
   await $.turn.complete(ANSWERED)
   await clock.advance(0)
   const band = await $.ui.mount(HINT)
-  expect(await band.find({ type: 'Text', text: /^ Opus 5\.5  p ⎇ main ↑1 · 0m · ✚1$/ })).toBeDefined()
+  expect(await band.find({ type: 'Text', text: /^ Opus 5\.5  p ⎇ main ↑1 · 0m │ ✚ 1$/ })).toBeDefined()
   await band.unmount()
 })
 
@@ -437,7 +445,7 @@ test('with sounds off nothing plays', { options: { sounds: false } }, async ($, 
   expect(played).toHaveLength(0)
 })
 
-test('switching theme draws its banner under the command line', async ($, on) => {
+test('switching theme draws its mascot at twice the size under the command line', async ($, on) => {
   on('ui.render', { component: 'CommandOutput' }, ($, e) => {
     const { Text } = $.ui.resolve(e)
     return <Text>{e.props.text}</Text>
@@ -446,7 +454,9 @@ test('switching theme draws its banner under the command line', async ($, on) =>
   const row = await $.ui.mount({ plugin: 'awesome-hud', component: 'CommandOutput', surface: 'terminal', props })
   const texts = (await row.findAll({ type: 'Text' })).map(t => t.text)
   expect(texts).toContain('Theme: got')
-  expect(texts).toContain(THEMES.got!.banner[1])
+  const portrait = await row.find({ key: 'portrait' })
+  expect(portrait?.props.columns).toBe(WIDTH * 2)
+  expect(portrait?.props.rows).toBe(HEIGHT)
   await row.unmount()
 })
 
@@ -581,6 +591,21 @@ test('the theme comes from /config', { options: { theme: 'chibi' } }, async ($, 
   await narrow.unmount()
 })
 
+test('the model chip reads <model> | <effort>, and /effort <level> moves it before the next request', async ($, on) => {
+  mock.clock(on)
+  bandHost(on)
+  on('command.run', () => ({ text: 'Set effort level to max' }))
+  const typed = { command: 'effort', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 100 } } as const
+
+  const idle = await $.ui.mount(HINT)
+  expect(await idle.find({ type: 'Text', text: / Opus 5\.5 \| / })).toBeUndefined()
+  await $.command.run({ ...typed, args: 'max' })
+  expect(await idle.find({ type: 'Text', text: / Opus 5\.5 \| ● max / })).toBeDefined()
+  await $.command.run({ ...typed, args: 'sideways' })
+  expect(await idle.find({ type: 'Text', text: / Opus 5\.5 \| ● max / })).toBeDefined()
+  await idle.unmount()
+})
+
 test('/awesome-hud <theme> switches and keeps the choice in /config', async ($, on) => {
   mock.clock(on)
   const saved: unknown[] = []
@@ -674,6 +699,101 @@ test('the turn line reads its own turn when another ended within a second of it'
   await clean.unmount()
 })
 
+test('the turn line keeps the latest turns, not the longest', async ($, on) => {
+  mock.clock(on)
+  linuxHost(on)
+  on('session.cwd', () => ({ value: '/home/me/project' }))
+  on('turn.start', ($, e) => ({ turnId: e.turnId }))
+  on('tool.call', () => ({ isError: true, result: 'Exit code 1', text: 'Exit code 1' }))
+  on('ui.render', { component: 'TurnDuration' }, ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>{e.props.word}</Text>
+  })
+  for (const durationMs of [60_000, 50_000, 45_000, 40_000]) {
+    await $.turn.start({ text: 'a', turnId: `t${durationMs}` })
+    await $.turn.complete({ ...ANSWERED, turnId: `t${durationMs}`, durationMs })
+  }
+  // A short turn with a failed tool, then one more long one.
+  await $.turn.start({ text: 'b', turnId: 'short' })
+  await $.tool.call({ tool: 'Bash', command: 'false' })
+  await $.turn.complete({ ...ANSWERED, turnId: 'short', durationMs: 3_000 })
+  await $.turn.start({ text: 'c', turnId: 'last' })
+  await $.turn.complete({ ...ANSWERED, turnId: 'last', durationMs: 41_000 })
+  const line = await $.ui.mount({ plugin: 'awesome-hud', component: 'TurnDuration', surface: 'terminal', props: { word: 'Baked', durationMs: 3_000 } })
+  expect(await line.find({ type: 'Text', text: /Knocked over 1 cup/ })).toBeDefined()
+  await line.unmount()
+})
+
+test('a search that found nothing is no error', async ($, on) => {
+  const clock = mock.clock(on)
+  const { played } = linuxHost(on)
+  bandHost(on)
+  on('tool.call', () => ({ isError: true, result: 'Exit code 1', text: 'Exit code 1' }))
+  await $.tool.call({ tool: 'Bash', command: 'grep -rn TODO src' })
+  await clock.advance(0)
+  expect(played).toEqual([])
+  const band = await $.ui.mount(HINT)
+  expect((await band.find({ type: 'Text', text: /^» $/ }))?.props.color).toBe(THEMES.cat!.accent)
+  await band.unmount()
+})
+
+test('a search that found nothing: exit 1 from a search last in its pipeline, alone on its line', async () => {
+  const miss = 'Exit code 1'
+  expect(isMiss('grep -rn TODO src', miss)).toBe(true)
+  expect(isMiss('cat a.log | rg error', miss)).toBe(true)
+  expect(isMiss('LC_ALL=C grep x f', miss)).toBe(true)
+  expect(isMiss('[ -f build/out ]', miss)).toBe(true)
+  expect(isMiss('grep x f', 'Exit code 2')).toBe(false)
+  expect(isMiss('grep x f | head -5', miss)).toBe(false)
+  expect(isMiss('npm run build && grep x f', miss)).toBe(false)
+  expect(isMiss('npm test', miss)).toBe(false)
+  expect(isMiss('grepper x', miss)).toBe(false)
+})
+
+test('a session whose usage fails to read still sets up', async ($, on) => {
+  mock.clock(on)
+  linuxHost(on)
+  bandHost(on)
+  on('session.usage', () => ({ deny: 'unavailable' }))
+  const registered: string[] = []
+  on('command.register', ($, e) => (registered.push(e.name), { value: { command: e.name } }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/home/me/project', surface: 'terminal', isInteractive: true })
+  expect(registered).toEqual(['awesome-hud'])
+})
+
+test('/clear starts the session clock again', async ($, on) => {
+  const clock = mock.clock(on)
+  linuxHost(on)
+  bandHost(on)
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200_000 }, rateLimits: [] } }))
+  on('command.register', () => ({ value: { command: 'awesome-hud' } }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  on('session.end', ($, e) => ({ sessionId: e.sessionId }))
+  await $.session.start({ cwd: '/home/me/project', surface: 'terminal', isInteractive: true })
+  await clock.advance(2 * 3_600_000)
+  const before = await $.ui.mount(HINT)
+  expect(await before.find({ type: 'Text', text: /^2h 0m$/ })).toBeDefined()
+  await before.unmount()
+  await $.session.end({ reason: 'clear', sessionId: 's1', resume: { id: 's1' } })
+  const after = await $.ui.mount(HINT)
+  expect(await after.find({ type: 'Text', text: /^0m$/ })).toBeDefined()
+  await after.unmount()
+})
+
+test('a turn the person interrupted shows no error', async ($, on) => {
+  const clock = mock.clock(on)
+  linuxHost(on)
+  bandHost(on)
+  on('turn.start', ($, e) => ({ turnId: e.turnId }))
+  await $.turn.start({ text: 'a', turnId: 't1' })
+  await $.turn.complete({ ...ANSWERED, reason: 'aborted', isAborted: true })
+  await clock.advance(0)
+  const band = await $.ui.mount(HINT)
+  expect((await band.find({ type: 'Text', text: /^» $/ }))?.props.color).toBe(THEMES.cat!.accent)
+  await band.unmount()
+})
+
 test('tests party only on a summary that passed, and the band shows the last run', async ($, on) => {
   const clock = mock.clock(on)
   linuxHost(on)
@@ -696,14 +816,14 @@ test('tests party only on a summary that passed, and the band shows the last run
   await clock.advance(0)
   expect(toasts).toEqual([])
   const failing = await $.ui.mount(HINT)
-  expect(await failing.find({ type: 'Text', text: /^✗ 2 failed · 0m ago$/ })).toBeDefined()
+  expect(await failing.find({ type: 'Text', text: /^✗ 2 failed \(0m ago\)$/ })).toBeDefined()
   await failing.unmount()
 
   await $.tool.call({ tool: 'Bash', command: 'npm test' })
   await clock.advance(180_000)
   expect(toasts).toEqual([THEMES.cat!.party.tests])
   const passing = await $.ui.mount(HINT)
-  expect(await passing.find({ type: 'Text', text: /^✓ 24 passed · 3m ago$/ })).toBeDefined()
+  expect(await passing.find({ type: 'Text', text: /^✓ 24 passed \(3m ago\)$/ })).toBeDefined()
   await passing.unmount()
 })
 
@@ -751,12 +871,13 @@ test('the repo row: the branch and its upstream, the tree, the files Claude edit
   const rateLimits = [{ kind: 'five_hour', percentUsed: 10 }, { kind: 'seven_day', percentUsed: 5 }]
   await $.session.measure({ context: { window: 200_000, percent: 42 }, rateLimits, changed: ['context', 'rateLimits'] })
   const band = await $.ui.mount(HINT)
-  expect(await band.find({ type: 'Text', text: /^⎇ main ↑2 ↓1 · ●1 ✚1 \?1 · ✎2 \+5 −2$/ })).toBeDefined()
+  expect(await band.find({ type: 'Text', text: /^⎇ main ↑2 ↓1 +│ ● 1  ✚ 1  \? 1 new$/ })).toBeDefined()
+  expect(await band.find({ type: 'Text', text: /^✎ 2 files \+5 −2$/ })).toBeDefined()
   expect(await band.find({ type: 'Text', text: /^ 5h .* 10% · 7d 5%$/ })).toBeDefined()
   await band.unmount()
 })
 
-test('a row too narrow for all of it drops whole parts, the line counts before the tests', async ($, on) => {
+test('what Claude did and ran takes the row under git, the tests marked stale once an edit follows them', async ($, on) => {
   const clock = mock.clock(on)
   linuxHost(on, { status: STATUS('main', '# branch.upstream origin/main', '# branch.ab +2 -1', '1 .M N... 100644 100644 100644 x y src/a.ts', '1 M. N... 100644 100644 100644 x y src/b.ts', '? notes.md') })
   bandHost(on, '/p')
@@ -769,9 +890,8 @@ test('a row too narrow for all of it drops whole parts, the line counts before t
   await $.tool.call({ tool: 'Bash', command: 'npm test' })
   await $.turn.complete(ANSWERED)
   await clock.advance(0)
-  // 52 cells beside the sprite: the row's 56 lose the line counts.
-  const band = await $.ui.mount({ ...HINT, viewport: { columns: 73, rows: 40 } })
-  expect(await band.find({ type: 'Text', text: /^⎇ main ↑2 ↓1 · ●1 ✚1 \?1 · ✎2 · ✓ 3 passed · 0m ago$/ })).toBeDefined()
+  const band = await $.ui.mount({ ...HINT, viewport: { columns: 105, rows: 40 } })
+  expect(await band.find({ type: 'Text', text: /^✎ 2 files \+5 −2 │ ✓ 3 passed \(0m ago\)$/ })).toBeDefined()
   await band.unmount()
 })
 
@@ -791,7 +911,7 @@ test('mid-rebase the repo row says where it stands, and at rest the quip line na
   await $.turn.complete(ANSWERED)
   await clock.advance(10_000)
   const band = await $.ui.mount(HINT)
-  expect(await band.find({ type: 'Text', text: /^⎇ main\|REBASE 2\/5 · 2 conflicts$/ })).toBeDefined()
+  expect(await band.find({ type: 'Text', text: /^⎇ main\|REBASE 2\/5 +│ 2 conflicts$/ })).toBeDefined()
   expect(await band.find({ type: 'Text', text: /^⎇ rebasing 2\/5, 2 conflicts$/ })).toBeDefined()
   await band.unmount()
 })
@@ -807,15 +927,15 @@ test('a status that runs out of time keeps the branch and its last counts, dim, 
   await $.turn.complete(ANSWERED)
   await clock.advance(0)
   const slow = await $.ui.mount(HINT)
-  expect(await slow.find({ type: 'Text', text: /^⎇ main · ✚1 \?1$/ })).toBeDefined()
-  expect((await slow.find({ type: 'Text', text: /^✚1$/ }))?.props.dimColor).toBe(true)
+  expect(await slow.find({ type: 'Text', text: /^⎇ main +│ ✚ 1  \? 1 new$/ })).toBeDefined()
+  expect((await slow.find({ type: 'Text', text: /^✚ 1$/ }))?.props.dimColor).toBe(true)
   await slow.unmount()
   isSlow = false
   await $.turn.complete(ANSWERED)
   await clock.advance(0)
   expect(ran.filter(argv => argv.includes('status')).at(-1)).toContain('--untracked-files=no')
   const quick = await $.ui.mount(HINT)
-  expect(await quick.find({ type: 'Text', text: /^⎇ main · ✚1$/ })).toBeDefined()
+  expect(await quick.find({ type: 'Text', text: /^⎇ main +│ ✚ 1$/ })).toBeDefined()
   await quick.unmount()
 })
 
@@ -839,6 +959,27 @@ test('git moving outside Claude reaches the band within the minute', async ($, o
   await clock.advance(60_000)
   const after = await $.ui.mount(HINT)
   expect(await after.find({ type: 'Text', text: /^⎇ other$/ })).toBeDefined()
+  await after.unmount()
+})
+
+test('a folder made a repository outside Claude reaches the band within the minute', async ($, on) => {
+  const clock = mock.clock(on)
+  let isRepo = false
+  linuxHost(on, { isRepo: () => isRepo })
+  bandHost(on, '/p')
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200_000 }, rateLimits: [] } }))
+  on('command.register', () => ({ value: { command: 'awesome-hud' } }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(0)
+  const before = await $.ui.mount(HINT)
+  expect(await before.find({ type: 'Text', text: /^⎇ / })).toBeUndefined()
+  await before.unmount()
+  // `git init` in another terminal.
+  isRepo = true
+  await clock.advance(60_000)
+  const after = await $.ui.mount(HINT)
+  expect(await after.find({ type: 'Text', text: /^⎇ main$/ })).toBeDefined()
   await after.unmount()
 })
 
@@ -875,6 +1016,30 @@ test("with PR status on, the repo row reads the branch's pull request from gh: i
   expect((await band.find({ type: 'Text', text: /^ approved$/ }))?.props.color).toBe('success')
   await band.unmount()
   expect(ran.find(argv => argv[0] === 'gh')).toEqual(['gh', 'pr', 'view', '--json', 'number,url,state,isDraft,reviewDecision,statusCheckRollup'])
+})
+
+test('with PR status on, a push while gh still reads the branch has it read again after', { options: { prStatus: true } }, async ($, on) => {
+  const clock = mock.clock(on)
+  const view = (status: string) =>
+    JSON.stringify({ number: 7, url: 'https://github.com/o/r/pull/7', state: 'OPEN', isDraft: false, statusCheckRollup: [{ status, conclusion: status === 'COMPLETED' ? 'SUCCESS' : null }] })
+  let answerFirst = () => {}
+  const answers = [new Promise<string>(resolve => (answerFirst = () => resolve(view('IN_PROGRESS')))), Promise.resolve(view('COMPLETED'))]
+  const { ran } = linuxHost(on, { gh: () => answers.shift()! })
+  bandHost(on, '/p')
+  on('ui.toast', () => ({ value: undefined }))
+  on('tool.call', () => ranBash('', { gitOperation: { push: { branch: 'main' } } }))
+  await $.turn.complete(ANSWERED)
+  await clock.advance(0)
+  // The push lands while the first gh still runs.
+  await $.tool.call({ tool: 'Bash', command: 'git push' })
+  await clock.advance(0)
+  answerFirst()
+  await clock.advance(0)
+  await clock.advance(0)
+  expect(ran.filter(argv => argv[0] === 'gh').length).toBe(2)
+  const band = await $.ui.mount(HINT)
+  expect((await band.find({ type: 'Text', text: /^ ✓$/ }))?.props.color).toBe('success')
+  await band.unmount()
 })
 
 test('with flavorText off the spinner keeps its own word', { options: { flavorText: false } }, async ($, on) => {
@@ -1039,8 +1204,22 @@ test('the branch cluster says what git is in the middle of, the commits to push 
   // Behind as of a fetch over a day old: dim, not a warning.
   const [, sync] = branchSegments({ ...GIT, behind: 4, isFetchStale: true })
   expect(sync?.runs[0]).toEqual({ text: '↓4', color: undefined, dim: true })
-  expect(rowText(treeSegments({ ...GIT, conflicts: 2, staged: 1, unstaged: 3, untracked: 4, stashes: 1 }))).toBe('2 conflicts · ●1 ✚3 ?4 ≡1')
-  expect(rowText(treeSegments({ ...GIT, unstaged: 3, untracked: null }))).toBe('✚3')
+  expect(rowText(treeSegments({ ...GIT, conflicts: 2, staged: 1, unstaged: 3, untracked: 4, stashes: 1 }))).toBe('2 conflicts │ ● 1  ✚ 3  ? 4 new │ ≡ 1 stash')
+  expect(rowText(treeSegments({ ...GIT, unstaged: 3, untracked: null }))).toBe('✚ 3')
+  // Clean is said only when the status said so: not of an earlier one, nor with untracked files left out.
+  expect(rowText(treeSegments({ ...GIT, untracked: 0 }))).toBe('✓ clean')
+  expect(rowText(treeSegments({ ...GIT, untracked: 0, isStale: true }))).toBe('')
+  expect(rowText(treeSegments({ ...GIT, untracked: null }))).toBe('')
+  // The cluster is padded to a fixed width, so the tree starts in one column.
+  expect(rowText(branchSegments({ ...GIT, ahead: 2 }, 20))).toBe('⎇ main ↑2'.padEnd(20))
+  expect(rowText(branchSegments({ ...GIT, branch: 'a-branch-name-longer-than-it' }, 8)).length).toBeGreaterThan(8)
+})
+
+test('a test run an edit followed is marked stale', async () => {
+  const run = { passed: 3, failed: 0, at: 1_000, command: 'npm test' }
+  const text = (editedAt: number) => rowText([testSegment(run, editedAt, 61_000)])
+  expect(text(0)).toBe('✓ 3 passed (1m ago)')
+  expect(text(2_000)).toBe('✓ 3 passed (1m ago, stale)')
 })
 
 test('tool targets are short and free of control characters', async () => {

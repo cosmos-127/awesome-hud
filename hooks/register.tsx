@@ -5,7 +5,7 @@ import type { Activity, AgentFailure, Commit, Compaction, Eater, FileEdit, Files
 import {
   COMPACT_AT, CONTEXT_CRIT, CONTEXT_WARN, EFFORT_GLYPH, FETCH_STALE_MS, branchSegments, clean, clockTime, commandKey, contextAlert, costOf, duration,
   editLines, fileSegments, filesLine, fill, fit, gaugeRuns, gitOf, gitTrouble, headOf, isHot, isTestCommand, isUnder, limitLabel, parsePr, parseStatus,
-  partyOf, pick, planSegments, prOfOperation, prSegment, prettyModel, quotaAlert, recordEdit, reportRows, shortTool, shown, targetOf, testSegment,
+  isMiss, partyOf, pick, planSegments, prOfOperation, prSegment, prettyModel, quotaAlert, recordEdit, reportRows, shortTool, shown, targetOf, testSegment,
   testsOf, toMeter, treeSegments, turnsLeft,
 } from './format'
 import type { GitOperation, GitStatus, Run, Segment } from './format'
@@ -18,6 +18,7 @@ import { DEFAULT_THEME, THEMES } from './themes'
 const themeName = atom({ plugin: 'awesome-hud', key: 'theme' } as const, DEFAULT_THEME)
 const mood = atom({ plugin: 'awesome-hud', key: 'mood' } as const, 'idle' as Mood)
 const quip = atom({ plugin: 'awesome-hud', key: 'quip' } as const, '')
+const EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max']
 const effort = atom({ plugin: 'awesome-hud', key: 'effort' } as const, null as string | null)
 const meter = atom({ plugin: 'awesome-hud', key: 'meter' } as const, null as Meter | null)
 const minute = atom({ plugin: 'awesome-hud', key: 'minute' } as const, 0)
@@ -44,19 +45,21 @@ const AT_WORK = new Set(['pending', 'running', 'waiting'])
 // The quip's `»` in the color of a mood that has one, so the state reads without the sprite.
 const MOOD_COLOR: Partial<Record<Mood, string>> = { error: 'error', waiting: 'warning', done: 'success', party: 'success' }
 const MIN_COLUMNS = 70
-const MIN_ROWS = 6
-// The sprite's height in rows, two pixels a cell; the status column is held to it.
+const MIN_ROWS = 7
+// The sprite's height in rows, two pixels a cell; the status column is held to it, and a repository's second row.
 const ROWS = HEIGHT / 2
+// The branch cluster's cells, so the tree starts in the same column from one branch to the next.
+const BRANCH_CLUSTER = 20
 // shortcut: under the prompt only the terminal's height is reported, not the room left there; on 2.1.303 the
 // five rows fit from about 20 rows, and 24 leaves room for a status line or a notice. Re-measure if rows get cut.
-const BELOW_MIN_TERMINAL_ROWS = 24
+const BELOW_MIN_TERMINAL_ROWS = 25
 // Edits come in bursts: the band's git counts follow once one pauses this long.
 const EDIT_PAUSE_MS = 1_500
 // With PR status on, checks move on GitHub's side: they are read again this many minutes apart while the person is about.
 const PR_EVERY_MINUTES = 5
 const PR_AWAY_MS = 30 * 60_000
 // A test run's saved output past this size is read from its end alone, where the summary is.
-const OUTPUT_READ_BYTES = 16 * 2 ** 20
+const OUTPUT_READ_BYTES = 2 ** 20
 
 /** Where the band is drawn, and its room: cells across, and whether the sprite's rows fit. */
 type Site = { requestId: string; columns: number; isTall: boolean }
@@ -103,7 +106,9 @@ let isGitAgain = false
 let gitSoon: Timer | undefined
 // The times of the files git writes on a commit, checkout, add, stash or fetch, when the last status ran.
 let gitMarks = ''
+// One gh at a time, like the status: a refresh asked for while one runs has it run once more after.
 let prRun: Promise<void> | undefined
+let isPrAgain = false
 
 // By theme, then mood and frame: two themes may share an accent, a palette or frames.
 const encoded = new Map<Theme, Map<string, string>>()
@@ -175,6 +180,9 @@ const celebrate = async ($: EngineInterface, cause: PartyCause) => {
   await setMood($, 'party', { backMs: 4_000, say: theme.party[cause] })
 }
 
+// A frame at twice its size: every pixel two across and two down.
+const twice = (px: readonly string[]) => px.flatMap(row => Array<string>(2).fill(row.replace(/./g, '$&$&')))
+
 const basename = (path: string) => path.split(/[\\/]/).filter(Boolean).pop() ?? path
 const isAbsolute = (path: string) => /^(?:[a-z]:)?[\\/]/i.test(path)
 // The main tree's folder from the git dir its worktrees share: `/src/app/.git` is app's, and so is a bare `app.git`.
@@ -244,10 +252,12 @@ async function opOf($: EngineInterface, gitDir: string): Promise<(GitOp & { bran
 }
 
 // The files git writes on a commit, checkout, reset, add, stash or fetch: their times move when the repository does.
+// FETCH_HEAD's time is also when the last fetch ran.
 const marksOf = async ($: EngineInterface, at: Repo) => {
-  const paths = [`${at.gitDir}/HEAD`, `${at.gitDir}/index`, `${at.gitDir}/logs/HEAD`, `${at.commonDir}/refs/stash`, `${at.commonDir}/FETCH_HEAD`]
-  const times = await Promise.all(paths.map(path => $.fs.stat(path).then(s => s.mtimeMs, () => 0)))
-  return times.join(' ')
+  const paths = [`${at.gitDir}/HEAD`, `${at.gitDir}/index`, `${at.gitDir}/logs/HEAD`, `${at.commonDir}/refs/stash`]
+  const statOf = (path: string) => $.fs.stat(path).then(s => s.mtimeMs, () => 0)
+  const [times, fetchedAt] = await Promise.all([Promise.all(paths.map(statOf)), statOf(`${at.commonDir}/FETCH_HEAD`)])
+  return { marks: [...times, fetchedAt].join(' '), fetchedAt }
 }
 
 // With no upstream, ahead is what no remote has yet, where there is a remote to have it.
@@ -275,10 +285,10 @@ async function readGit($: EngineInterface) {
     $.clock.now(),
     read($, git),
   ])
-  gitMarks = marks
+  gitMarks = marks.marks
+  const { fetchedAt } = marks
   const head = headOf(headText)
   const status = ran?.status
-  const fetchedAt = Number(marks.split(' ')[4]) || 0
   const next = gitOf({
     head,
     status,
@@ -319,12 +329,18 @@ const gitAfterEdits = ($: EngineInterface) => {
 
 // Whether the repository moved since the last status: the session's directory changed, or git wrote its own files.
 // Before git has answered once (out of time, or no git at all) a turn's end or a prompt asks again, not the clock.
+// A folder found to be no repository is one once it has a `.git` (a `git init` elsewhere).
 async function gitMoved($: EngineInterface) {
   if (known === undefined) return false
   const cwd = await $.session.cwd().catch(() => undefined)
   if (cwd === undefined) return false
   if (known.cwd !== cwd) return true
-  return known.repo !== null && (await marksOf($, known.repo)) !== gitMarks
+  if (known.repo === null) {
+    if (!(await $.fs.exists(`${cwd}/.git`).catch(() => false))) return false
+    known = undefined
+    return true
+  }
+  return (await marksOf($, known.repo)).marks !== gitMarks
 }
 
 // What a command did to git: the commit or pull request Claude Code saw it make kept, and the band's git read again.
@@ -350,19 +366,26 @@ async function gitAfterBash($: EngineInterface, command: string, op: GitOperatio
 // With PR status on, the branch's pull request from GitHub's CLI: the mod's one use of the network.
 function refreshPr($: EngineInterface): Promise<void> {
   if (!isPrStatus) return Promise.resolve()
-  prRun ??= (async () => {
-    const branch = (await read($, git))?.branch ?? null
-    if (branch === null) return
-    try {
-      const argv = ['gh', 'pr', 'view', '--json', 'number,url,state,isDraft,reviewDecision,statusCheckRollup']
-      const env = { GH_PROMPT_DISABLED: '1', GH_NO_UPDATE_NOTIFIER: '1', NO_COLOR: '1' }
-      const r = await $.process.run(argv, { cwd: await $.session.cwd(), timeoutMs: 15_000, env })
-      const found = r.exitCode === 0 ? parsePr(r.stdout, branch) : null
-      // gh exits 1 for a branch with no pull request, as when it is not signed in: one Claude opened stays until gh names one.
-      await update($, pr, prev => found ?? (prev?.branch === branch ? prev : null))
-    } catch {
-      // No gh, or out of time: the band keeps what it had.
-    }
+  if (prRun) {
+    isPrAgain = true
+    return prRun
+  }
+  prRun = (async () => {
+    do {
+      isPrAgain = false
+      const branch = (await read($, git))?.branch ?? null
+      if (branch === null) return
+      try {
+        const argv = ['gh', 'pr', 'view', '--json', 'number,url,state,isDraft,reviewDecision,statusCheckRollup']
+        const env = { GH_PROMPT_DISABLED: '1', GH_NO_UPDATE_NOTIFIER: '1', NO_COLOR: '1' }
+        const r = await $.process.run(argv, { cwd: await $.session.cwd(), timeoutMs: 15_000, env })
+        const found = r.exitCode === 0 ? parsePr(r.stdout, branch) : null
+        // gh exits 1 for a branch with no pull request, as when it is not signed in: one Claude opened stays until gh names one.
+        await update($, pr, prev => found ?? (prev?.branch === branch ? prev : null))
+      } catch {
+        // No gh, or out of time: the band keeps what it had.
+      }
+    } while (isPrAgain)
   })().finally(() => {
     prRun = undefined
   })
@@ -406,8 +429,8 @@ async function outputOf($: EngineInterface, result: ToolCallResult, bash: Builti
   try {
     const { size } = await $.fs.stat(path)
     if (size <= OUTPUT_READ_BYTES) return await $.fs.read(path)
-    // shortcut: past that size only its end is read, with `tail`, which a Windows host lacks.
-    const r = await $.process.run(['tail', '-c', String(2 ** 20), path], { timeoutMs: 5_000 })
+    // shortcut: past that size only its end is read, with `tail`, which a Windows host lacks: it reads the preview instead.
+    const r = await $.process.run(['tail', '-c', String(OUTPUT_READ_BYTES), path], { timeoutMs: 5_000 })
     return r.exitCode === 0 ? r.stdout : (result.text ?? '')
   } catch {
     return result.text ?? ''
@@ -505,7 +528,7 @@ async function band($: EngineInterface, ui: Elements['terminal'], site: Site) {
       {fit(segments, columns).flatMap((s, i) => [
         ...(i > 0 && s.sep
           ? [
-              <Text key={`${s.key}-sep`} dimColor>
+              <Text key={`${s.key}-sep`} dimColor={!s.sep.includes('│')} color={s.sep.includes('│') ? theme.accent : undefined}>
                 {s.sep}
               </Text>,
             ]
@@ -557,8 +580,8 @@ async function band($: EngineInterface, ui: Elements['terminal'], site: Site) {
   const limits = meterNow?.limits ?? []
   const plan = planSegments(limits, now, theme.accent)
 
-  const glyph = effortNow ? ` ${EFFORT_GLYPH[effortNow] ?? ''} ${effortNow}` : ''
-  const chip: Segment = { key: 'chip', keep: Infinity, runs: [{ text: ` ${prettyModel(model)}${glyph} `, bg: theme.accent, color: theme.onAccent, bold: true }] }
+  const level = effortNow ? ` | ${EFFORT_GLYPH[effortNow] ?? ''} ${effortNow}` : ''
+  const chip: Segment = { key: 'chip', keep: Infinity, runs: [{ text: ` ${prettyModel(model)}${level} `, bg: theme.accent, color: theme.onAccent, bold: true }] }
   // In a linked worktree the folder is the worktree's own: the project it belongs to says more, its name after.
   const place: Segment[] = gitNow?.worktree
     ? [
@@ -573,13 +596,15 @@ async function band($: EngineInterface, ui: Elements['terminal'], site: Site) {
   ]
   const branch = gitNow ? branchSegments(gitNow) : []
   // What changed: the tree, the files Claude edited, the last test run, the branch's pull request.
-  const changes: Segment[] = [
-    ...(gitNow ? treeSegments(gitNow) : []),
+  const tree = gitNow ? treeSegments(gitNow) : []
+  const work: Segment[] = [
     ...fileSegments(filesNow),
     ...(testsNow ? [testSegment(testsNow, editedAtNow, now)] : []),
     // A pull request is its branch's: a switch to another hides it.
     ...(prNow && gitNow && prNow.branch === gitNow.branch ? [prSegment(prNow)] : []),
   ]
+
+  const changes = [...tree, ...work]
 
   // Two lines: compact's stats alone, or, with no room for the sprite, its text face and the quip over the gauges.
   if (!hasCat) {
@@ -605,17 +630,19 @@ async function band($: EngineInterface, ui: Elements['terminal'], site: Site) {
     )
   }
 
-  const repoRow = [...branch, ...changes]
+  // The repository takes two rows, what git holds and what Claude did; the column grows by one for it.
+  const gitRow = [...(gitNow ? branchSegments(gitNow, BRANCH_CLUSTER) : []), ...tree]
   // The status column is held to the sprite's rows, the quip on the last, so no row moves as others come and go.
   return (
     <Box flexDirection="row" columnGap={1}>
       <Raster key="cat" columns={WIDTH} rows={ROWS} cells={cellsAt(shownMood, idx)} />
-      <Box flexDirection="column" height={ROWS} justifyContent="space-between">
+      <Box flexDirection="column" height={gitNow ? ROWS + 1 : ROWS} justifyContent="space-between">
         <Box flexDirection="column">
           {row([chip, ...place, ...spent], 'top')}
           <Text wrap="truncate-end">{runsOf(ui, [...contextGauge, turnsNote, eaterNote], 'ctx')}</Text>
           {plan.length > 0 ? row(plan, 'plan') : null}
-          {repoRow.length > 0 ? row(repoRow, 'repo') : null}
+          {gitRow.length > 0 ? row(gitRow, 'repo') : null}
+          {work.length > 0 ? row(work, 'work') : null}
         </Box>
         <Text wrap="truncate-end">
           <Text color={MOOD_COLOR[shownMood] ?? theme.accent}>» </Text>
@@ -639,8 +666,9 @@ export const register: Register = (on, options) => {
     await update($, themeName, () => configured)
     theme = themeOf(configured)
 
-    const usage = await $.session.usage()
-    const m = toMeter(usage, usage.startedAt)
+    // A usage that fails to read leaves the meter for session.measure: the rest of the setup must still run.
+    const usage = await $.session.usage().catch(() => undefined)
+    const m = usage ? toMeter(usage, usage.startedAt) : null
     hot = isHot(m)
     current = await read($, mood)
     lastActive = await $.clock.now()
@@ -684,6 +712,17 @@ export const register: Register = (on, options) => {
     return { text: `${list.join('\n')}\n\n/awesome-hud <theme> switches, and keeps the choice in /config. /awesome-hud files lists the files Claude edited.` }
   })
 
+  // `/effort <level>` takes hold at the next request; the chip need not wait for `turn.step` to read it.
+  on('command.run', { command: 'effort' }, async ($, e, next) => {
+    const result = await next(e)
+    const level = e.args.trim().toLowerCase()
+    if (EFFORT_LEVELS.includes(level) && level !== lastEffort) {
+      lastEffort = level
+      await update($, effort, () => level)
+    }
+    return result
+  })
+
   on('session.measure', async ($, e, next) => {
     const prev = await read($, meter)
     const now = await $.clock.now()
@@ -699,8 +738,12 @@ export const register: Register = (on, options) => {
   })
 
   on('session.end', async ($, e, next) => {
+    // A cleared conversation starts its clock and context again; the last test run and the PR are the code's, and stay.
     if (e.reason === 'clear') {
+      const now = await $.clock.now()
       await Promise.all([
+        update($, meter, m => (m ? { ...m, startedAt: now } : m)),
+        update($, eater, () => null),
         update($, contextHistory, () => []),
         update($, turnNotes, () => ({})),
         update($, activity, () => ({ running: [] })),
@@ -746,7 +789,8 @@ export const register: Register = (on, options) => {
 
   on('tool.check', async ($, e, next) => {
     const result = await next(e)
-    if (result.decision === 'ask' && agentOf(e) === undefined) {
+    // A question asks through the permission check too; tool.call already played its sound.
+    if (result.decision === 'ask' && agentOf(e) === undefined && e.tool !== 'AskUserQuestion') {
       sound($, 'waiting')
       await setMood($, 'waiting')
     }
@@ -786,7 +830,9 @@ export const register: Register = (on, options) => {
     if (e.tool === 'Bash' && hasEnded) await gitAfterBash($, e.command, bash?.gitOperation)
     if (!isMain) return result
 
-    if (result.isError === true || (run?.failed ?? 0) > 0) {
+    // A search that found nothing exits 1 and is no failure.
+    const isFailed = result.isError === true && !(e.tool === 'Bash' && isMiss(e.command, result.text))
+    if (isFailed || (run?.failed ?? 0) > 0) {
       turnErrors += 1
       // One error sound a turn, however many tools fail in it.
       if (turnErrors === 1) sound($, 'error')
@@ -822,14 +868,16 @@ export const register: Register = (on, options) => {
       isTurning = false
       const m = await read($, meter)
       const note: TurnNote = { errors: turnErrors, isParty: turnParty }
+      // Keyed `d<ms>`: a bare number key would sort by size, and the trim would keep the longest turns, not the latest.
       await Promise.all([
-        update($, turnNotes, notes => ({ ...Object.fromEntries(Object.entries(notes).slice(-4)), [String(e.durationMs)]: note })),
+        update($, turnNotes, notes => ({ ...Object.fromEntries(Object.entries(notes).slice(-4)), [`d${e.durationMs}`]: note })),
         update($, contextHistory, h => (m?.contextPercent === undefined ? h : [...h, m.contextPercent].slice(-10))),
       ])
       // A party already played its sound; an interruption is the person's own doing and plays none.
       if (e.reason === 'answer' && !turnParty && e.durationMs >= LONG_TURN_MS) sound($, 'done')
       else if ((e.reason === 'error' || e.reason === 'refusal') && turnErrors === 0) sound($, 'error')
       if (e.reason === 'answer') await setMood($, turnParty ? 'party' : 'done', { backMs: turnParty ? 4_000 : 6_000 })
+      else if (e.reason === 'aborted') await setMood($, 'idle')
       else await setMood($, 'error', { backMs: 4_000 })
       // Not awaited: Claude Code waits on this hook, and git in a big repo takes seconds.
       void refreshGit($)
@@ -878,18 +926,16 @@ export const register: Register = (on, options) => {
         </Box>
       )
     }
-    // A theme switched to draws its banner under the command's line; the model reads only the line.
-    if (!isTheme(name)) return next(e)
+    // A theme switched to draws its mascot at twice the size under the command's line, where a terminal can; the
+    // model reads only the line.
+    if (!isTheme(name) || e.surface !== 'terminal') return next(e)
     const t = themeOf(name)
+    const { Raster } = $.ui.resolve(e)
     return (
       <Box flexDirection="column">
         {await next(e)}
-        <Box flexDirection="column" paddingLeft={5}>
-          {t.banner.map((row, i) => (
-            <Text key={`row${i}`} color={t.accent} wrap="truncate-end" mono>
-              {row || ' '}
-            </Text>
-          ))}
+        <Box paddingLeft={5}>
+          <Raster key="portrait" columns={WIDTH * 2} rows={HEIGHT} cells={encode(twice(t.moods.idle[0]!.px), t.palette)} />
         </Box>
       </Box>
     )
@@ -900,7 +946,7 @@ export const register: Register = (on, options) => {
     const t = themeOf(await read($, themeName))
     const notes = await read($, turnNotes)
     // The note saved under this duration, else the nearest within a second: two saved turns can be that close in length.
-    const gap = (k: string) => Math.abs(Number(k) - e.props.durationMs)
+    const gap = (k: string) => Math.abs(Number(k.slice(1)) - e.props.durationMs)
     const key = Object.keys(notes).filter(k => gap(k) < 1_000).sort((a, b) => gap(a) - gap(b))[0]
     const note = key === undefined ? undefined : notes[key]
     const word = note?.isParty ? t.turn.party : note?.errors ? t.turn.errors(note.errors) : pick(t.turn.plain, e.props.durationMs)

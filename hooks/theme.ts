@@ -12,15 +12,14 @@ export type SoundEvent = 'done' | 'error' | 'waiting' | 'party'
 export type Theme = {
   /** One line for `/awesome-hud`'s list. */
   description: string
-  /** ASCII art drawn under `/awesome-hud <theme>`, in the accent: at most 48 columns. */
-  banner: readonly string[]
   /** A WAV file per sound event, relative to the plugin's folder. */
   sounds: Record<SoundEvent, string>
-  /** The model chip's background, and the color of the quip's `»` and of the banner, hex. */
+  /** The model chip's background, and the color of the quip's `»`, hex. */
   accent: string
   /** Text drawn on the accent. */
   onAccent: string
   palette: Record<string, number>
+  /** Each mood's frames, looped; idle's first is the portrait `/awesome-hud <theme>` draws at twice the size. */
   moods: Record<Mood, Frame[]>
   /** A one-line text face per mood, for a band too small for the sprite. */
   faces: Record<Mood, string>

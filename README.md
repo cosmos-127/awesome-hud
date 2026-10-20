@@ -20,11 +20,11 @@ The band draws in terminal sessions; the desktop app shows no band. Built and te
 
 | Theme | Mascot | Sounds |
 | --- | --- | --- |
-| `cat` (default) | an orange cat with opinions | a mrrp, a hiss, a questioning meow, an 8-bit arpeggio |
-| `chibi` | big eyes, sweat drops, anime feelings | a sparkle, a boing, a ding-dong, a magical fanfare |
-| `got` | a direwolf of the North | a war horn, a sword clang, two raven caws, a horn fanfare |
+| `cat` (default) | an orange tabby with opinions, and a tail that says what it thinks | a mrrp, a hiss, a questioning meow, an 8-bit arpeggio |
+| `chibi` | big violet eyes, a side ponytail, anime feelings | a sparkle, a boing, a ding-dong, a magical fanfare |
+| `got` | a direwolf of the North, in the snow | a war horn, a sword clang, two raven caws, a horn fanfare |
 
-Each theme has its own lines for every mood, its own spinner words, and an ASCII banner that prints when you switch to it. `got` is an unofficial fan homage to *Game of Thrones*, not affiliated with or endorsed by HBO. Every picture and sound here is original: the mascots are drawn pixel by pixel and the sounds are synthesized by `scripts/sounds.py`.
+Each theme has its own lines for every mood and its own spinner words, and its mascot shows itself at twice the size when you switch to it. `got` is an unofficial fan homage to *Game of Thrones*, not affiliated with or endorsed by HBO. Every picture and sound here is original: the mascots are drawn pixel by pixel and the sounds are synthesized by `scripts/sounds.py`.
 
 ## What the band shows
 
@@ -36,20 +36,28 @@ Beside the mascot, top to bottom:
 4. The repository and what changed in it (below).
 5. What the mascot has to say: the file or command it is watching, or a line for its mood. At rest it says what needs you instead: failing tests, a rebase stopped on conflicts, a failed agent.
 
-`⎇ main ↑2 ↓1 · ●3 ✚5 ?1 ≡1 · ✎4 +120 −34 · ✓ 24 passed · 3m ago · PR #42 ✓`
+```
+⎇ main ↑2 ↓1       │ ● 3  ✚ 5  ? 1 new │ ≡ 1 stash
+✎ 4 files +120 −34 │ ✓ 24 passed (3m ago) │ PR #42 ✓
+```
+
+The repository takes two rows: what git holds, then what Claude did and ran. A clean tree reads `✓ clean`.
 
 | Part | Meaning |
 | --- | --- |
 | `⎇ main` | The branch, and `\|REBASE 2/5`, `MERGING` and the like when git is mid-operation. |
 | `↑2 ↓1` | Commits ahead of and behind the upstream. |
-| `●3 ✚5 ?1 ≡1` | Files staged, changed, untracked; stashes. Conflicts show in red. |
-| `✎4 +120 −34` | Files Claude edited in the project this session, and the lines added and removed. |
-| `✓ 24 passed` | The last test run (vitest, jest, pytest, go, cargo and many more), gray once Claude has edited since. |
+| `● 3  ✚ 5  ? 1 new` | Files staged, changed, untracked (`✓ clean` when none). Conflicts show in red. |
+| `≡ 1 stash` | Stashes. |
+| `✎ 4 files +120 −34` | Files Claude edited in the project this session, and the lines added and removed. |
+| `✓ 24 passed (3m ago)` | The last test run and how long ago it ended (vitest, jest, pytest, go, cargo and many more); gray and marked `stale` once Claude has edited since. |
 | `PR #42` | The branch's pull request, once Claude opens one; with **PR status** on, its checks and review too. |
 
-A row with too much for the room drops its least telling parts first. In a terminal narrower than about 70 columns or shorter than 24 rows, the band folds to two lines with no mascot; so does **Layout** `compact`. **Position** `above` puts the band over the prompt.
+A row with too much for the room drops its least telling parts first. In a terminal narrower than about 70 columns or shorter than 25 rows, the band folds to two lines with no mascot; so does **Layout** `compact`. **Position** `above` puts the band over the prompt.
 
 ## Moods and sounds
+
+![Every theme in every mood](assets/moods.gif)
 
 | Mood | When |
 | --- | --- |
@@ -88,12 +96,12 @@ Run `/config` and look for the awesome-hud rows.
 A theme is one file in `hooks/themes/` plus four sounds. `hooks/theme.ts` documents every field.
 
 1. Copy `hooks/themes/cat.ts` to `hooks/themes/<name>.ts` and rename the export.
-2. Draw the face in a 14 × 10 grid, one character per pixel and `.` for transparent, with a color per character in `palette`. Keep the outline off the edges: a dark outline vanishes on a dark terminal.
-3. Give `moodsOf` (`hooks/sprite.ts`) the face and six expressions (`blink`, `lookLeft`, `lookRight`, `shock`, `happy`, `worried`). It builds all eight moods.
-4. Write its `quips`, `verbs`, `spinner`, `turn` and `party` lines, and a `banner` of up to 48 columns of ASCII art from a picture you have the rights to.
+2. Draw the face in columns 0–13 of an 18 × 10 grid, one character per pixel and `.` for transparent, with a color per character in `palette`. Give it mid-tone outlines and shades: near-black vanishes on a dark terminal and near-white on a light one.
+3. Columns 14–17 are the mascot's too: at rest it keeps something there (the cat's tail, the chibi's ponytail, the wolf's snow), and a mood that needs an emote puts it there. Write all eight `moods` with `paint`, `stamp`, `shift` and `layer` from `hooks/sprite.ts`, as `cat.ts` does.
+4. Write its `quips`, `verbs`, `spinner`, `turn` and `party` lines.
 5. Add four WAV files to `sounds/<name>/` (`done`, `error`, `waiting`, `party`); `scripts/sounds.py` shows how the built-in ones are synthesized.
 6. Register it in `hooks/themes/index.ts` (any name but `files`) and in `userConfig.theme.options` in `.claude-plugin/plugin.json`.
-7. Run `claude plugin test .` to check the frames, the banner and the sounds.
+7. Run `claude plugin test .` to check the frames and the sounds.
 
 ## Privacy
 
@@ -108,6 +116,7 @@ claude --plugin-dir .       # reloads the mod each time you save
 claude plugin test .        # the tests in hooks/awesome-hud.test.tsx
 claude plugin validate .    # what Claude Code will load, and anything it would refuse
 python3 scripts/sounds.py   # rebuild sounds/ from the recipes in the script
+python3 scripts/preview.py  # redraw assets/preview.gif and assets/moods.gif from the themes (needs bun and Pillow)
 ```
 
 ## License

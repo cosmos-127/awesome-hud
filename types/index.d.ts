@@ -109,6 +109,7 @@ declare module 'claude-code' {
       reports: Record<string, FilesReport>
       /** Context percent at the end of each recent turn, oldest first. */
       contextHistory: number[]
+      /** The last few turns' notes, by `d` and the turn's duration in ms. */
       turnNotes: Record<string, TurnNote>
     }
   }

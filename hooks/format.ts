@@ -5,14 +5,14 @@ import type { FileEdit, FilesReport, Git, GitOp, Limit, Meter, Mood, PathState, 
 // Thresholds from claude-hud: context warns at 70 and is critical at 85, quota at 75 and 90.
 export const CONTEXT_WARN = 70
 export const CONTEXT_CRIT = 85
-export const QUOTA_WARN = 75
+const QUOTA_WARN = 75
 export const QUOTA_CRIT = 90
 // Where auto-compact is taken to start, as a percent of the window, until the context breakdown says where it does.
 export const COMPACT_AT = 92
 export const BAR = 12
 export const EFFORT_GLYPH: Record<string, string> = { low: '○', medium: '◔', high: '◑', xhigh: '◕', max: '●' }
 // A branch's name past this many cells loses its middle: its prefix and its end say the most.
-export const BRANCH_CELLS = 24
+const BRANCH_CELLS = 24
 // A fetch older than a day may have missed what the upstream gained since.
 export const FETCH_STALE_MS = 24 * 3_600_000
 
@@ -47,7 +47,7 @@ export const turnsLeft = (history: readonly number[], percent: number | undefine
  * A bar of `width` cells, its used part and its free part apart so each takes its own color. It fills by half
  * cells, `╸` the odd half, and `┊` marks the free cell where `tick`, a percent, falls.
  */
-export const thinBar = (pct: number | undefined, width = BAR, tick?: number): [string, string] => {
+const thinBar = (pct: number | undefined, width = BAR, tick?: number): [string, string] => {
   const halves = Math.max(0, Math.min(2 * width, Math.round(((pct ?? 0) / 100) * 2 * width)))
   const used = '━'.repeat(Math.floor(halves / 2)) + (halves % 2 === 1 ? '╸' : '')
   const free = [...'─'.repeat(width - used.length)]
@@ -253,13 +253,20 @@ export const isTestCommand = (command: string) => TESTS.test(command)
 const GIT_RUN = /(?:^|[;&|({\n])\s*(?:[A-Za-z_]\w*=\S*\s+)*git((?:\s+(?:-[cC]\s+\S+|--?[a-z][\w-]*(?:=\S+)?))*)\s+(commit|push)\b([^;&|\n]*)/g
 
 /** The commit or push a shell line runs, read from its text alone: a push before a commit; a dry run is neither. */
-export const gitPartyOf = (command: string): 'commit' | 'push' | undefined => {
+const gitPartyOf = (command: string): 'commit' | 'push' | undefined => {
   const bare = command.replace(/'[^']*'|"(?:\\.|[^"\\])*"/g, "''")
   const verbs = [...bare.matchAll(GIT_RUN)]
     .filter(m => !/(?:^|\s)--dry-run\b/.test(m[3]!) && !(m[2] === 'push' && /(?:^|\s)-n\b/.test(m[3]!)))
     .map(m => m[2])
   return verbs.includes('push') ? 'push' : verbs.includes('commit') ? 'commit' : undefined
 }
+
+// Searches and comparisons whose exit 1 means "none found" or "they differ", not a failure.
+const MISS = /^\s*(?:[A-Za-z_]\w*=\S*\s+)*(?:grep|egrep|fgrep|rg|ag|diff|cmp|pgrep|which|test|\[)(?:\s|$)/
+
+/** Whether a failed command is a search that found nothing: exit 1 from one of those, last in its pipeline, alone on its line. */
+export const isMiss = (command: string, text: string | undefined) =>
+  /^Exit code 1\b/.test(text ?? '') && !/;|&&|\|\||\n/.test(command) && MISS.test(command.split('|').at(-1)!)
 
 /** What Claude Code's Bash tool read a command to have done in git: a commit, a push, a branch merged or rebased, a pull request changed. */
 export type GitOperation = NonNullable<BuiltinToolResults['Bash']['gitOperation']>
@@ -411,7 +418,7 @@ export const headOf = (text: string): { branch: string | null; oid: string | nul
 }
 
 /** What readGit read, for gitOf: a status undefined when it did not finish. */
-export type GitReading = {
+type GitReading = {
   head: { branch: string | null; oid: string | null }
   status: GitStatus | undefined
   prev: Git | null
@@ -454,8 +461,11 @@ const OP_WORDS: Record<GitOp['kind'], string> = { rebase: 'rebasing', am: 'apply
 const stepOf = (op: GitOp) => (op.step && op.of ? ` ${op.step}/${op.of}` : '')
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
-/** The branch cluster: `⎇ main|REBASE 2/5`, the commits ahead and behind, and an upstream gone or never set. */
-export const branchSegments = (git: Git): Segment[] => {
+/**
+ * The branch cluster: `⎇ main|REBASE 2/5`, the commits ahead and behind, and an upstream gone or never set. With a
+ * `width`, its last part is padded to that many cells, so what follows starts in the same column whatever the branch.
+ */
+export const branchSegments = (git: Git, width = 0): Segment[] => {
   const name = git.branch === null ? `@${(git.oid ?? '').slice(0, 7)}` : middle(git.branch, BRANCH_CELLS)
   const segments: Segment[] = [
     {
@@ -467,28 +477,32 @@ export const branchSegments = (git: Git): Segment[] => {
   ]
   // Behind counts only what the last fetch saw: past a day it is dim, not a warning.
   const sync: Run[] = [
-    ...(git.ahead > 0 ? [{ text: `↑${git.ahead}` }] : []),
+    ...(git.ahead > 0 ? [{ text: `↑${git.ahead}`, dim: true }] : []),
     ...(git.behind > 0 ? [{ text: `${git.ahead > 0 ? ' ' : ''}↓${git.behind}`, color: git.isFetchStale ? undefined : 'warning', dim: git.isFetchStale }] : []),
   ]
   if (sync.length > 0) segments.push({ key: 'sync', sep: ' ', keep: 90, runs: sync })
   if (git.upstream === 'gone') segments.push({ key: 'upstream', sep: ' ', keep: 30, runs: [{ text: 'upstream gone', color: 'warning' }] })
   else if (git.upstream === 'none' && git.ahead > 0) segments.push({ key: 'upstream', sep: ' ', keep: 30, runs: [{ text: 'unpublished', dim: true }] })
+  const used = segments.reduce((n, s, i) => n + (i > 0 ? cells(s.sep ?? '') : 0) + s.runs.reduce((m, r) => m + cells(r.text), 0), 0)
+  if (used < width) segments[segments.length - 1]!.runs.push({ text: ' '.repeat(width - used) })
   return segments
 }
 
-/** The tree: conflicts in words, then the files staged, changed and untracked, and the stashes; dim when the counts are an earlier status's. */
+/** The tree: conflicts in words, then the files staged, changed and untracked, `✓ clean` when none, and the stashes; dim when the counts are an earlier status's. */
 export const treeSegments = (git: Git): Segment[] => {
   const segments: Segment[] = []
-  if (git.conflicts > 0) segments.push({ key: 'conflicts', sep: ' · ', keep: 95, runs: [{ text: plural(git.conflicts, 'conflict'), color: 'error', bold: true }] })
-  const counts = ([['●', git.staged, 'success'], ['✚', git.unstaged, 'warning'], ['?', git.untracked ?? 0, undefined]] as const).flatMap(([mark, n, color]) =>
-    n > 0 ? [{ text: `${mark}${n}`, color: git.isStale ? undefined : color, dim: git.isStale || color === undefined }] : [],
+  if (git.conflicts > 0) segments.push({ key: 'conflicts', sep: ' │ ', keep: 95, runs: [{ text: plural(git.conflicts, 'conflict'), color: 'error', bold: true }] })
+  const counts = ([['● ', git.staged, '', 'success'], ['✚ ', git.unstaged, '', 'warning'], ['? ', git.untracked ?? 0, ' new', undefined]] as const).flatMap(([mark, n, word, color]) =>
+    n > 0 ? [{ text: `${mark}${n}${word}`, color: git.isStale ? undefined : color, dim: git.isStale || color === undefined }] : [],
   )
-  if (counts.length > 0) segments.push({ key: 'tree', sep: ' · ', keep: 60, runs: between<Run>(counts, () => ({ text: ' ' })) })
-  if (git.stashes > 0) segments.push({ key: 'stash', sep: ' ', keep: 20, runs: [{ text: `≡${git.stashes}`, dim: true }] })
+  if (counts.length > 0) segments.push({ key: 'tree', sep: ' │ ', keep: 60, runs: between<Run>(counts, () => ({ text: '  ' })) })
+  // Clean only when the status said so: an earlier one, or untracked files left out, leaves it unknown.
+  else if (git.conflicts === 0 && !git.isStale && git.untracked === 0) segments.push({ key: 'tree', sep: ' │ ', keep: 60, runs: [{ text: '✓ clean', dim: true }] })
+  if (git.stashes > 0) segments.push({ key: 'stash', sep: ' │ ', keep: 20, runs: [{ text: `≡ ${git.stashes} stash`, dim: true }] })
   return segments
 }
 
-/** What Claude changed in the project this session: `✎5`, then the lines it added and removed. */
+/** What Claude changed in the project this session: `✎ 5 files`, then the lines it added and removed. */
 export const fileSegments = (files: readonly FileEdit[]): Segment[] => {
   const mine = files.filter(f => f.isInProject)
   if (mine.length === 0) return []
@@ -496,23 +510,26 @@ export const fileSegments = (files: readonly FileEdit[]): Segment[] => {
   const removed = mine.reduce((n, f) => n + f.removed, 0)
   const lines: Run[] = [...(added > 0 ? [{ text: `+${added}`, color: 'success' }] : []), ...(removed > 0 ? [{ text: `−${removed}`, color: 'error' }] : [])]
   return [
-    { key: 'files', sep: ' · ', keep: 55, runs: [{ text: `✎${mine.length}` }] },
+    { key: 'files', sep: ' │ ', keep: 55, runs: [{ text: `✎ ${mine.length} ${mine.length === 1 ? 'file' : 'files'}` }] },
     ...(lines.length > 0 ? [{ key: 'lines', sep: ' ', keep: 25, runs: between<Run>(lines, () => ({ text: ' ' })) }] : []),
   ]
 }
 
-/** The last test run, `✗ 2 failed (was 5) · 3m ago`: gray once an edit in the project came after it. */
+/** The last test run, `✗ 2 failed (was 5, 3m ago)`: gray, and `stale`, once an edit in the project came after it. */
 export const testSegment = (run: TestRun, editedAt: number, now: number): Segment => {
   // A run older than the last edit no longer vouches for the code: it loses its color.
-  const color = editedAt > run.at ? undefined : run.failed > 0 ? 'error' : 'success'
-  const was = run.failed > 0 && run.was && run.was.failed !== run.failed ? ` (was ${run.was.failed})` : ''
+  const isStale = editedAt > run.at
+  const color = isStale ? undefined : run.failed > 0 ? 'error' : 'success'
+  const was = run.failed > 0 && run.was && run.was.failed !== run.failed ? `was ${run.was.failed}, ` : ''
   return {
     key: 'tests',
-    sep: ' · ',
+    sep: ' │ ',
     keep: 85,
     runs: [
       { text: run.failed > 0 ? `✗ ${run.failed} failed` : `✓ ${run.passed} passed`, color, dim: color === undefined },
-      { text: `${was} · ${duration(now - run.at)} ago`, dim: true },
+      { text: ` (${was}${duration(now - run.at)} ago`, dim: true },
+      ...(isStale ? [{ text: ', stale', color: 'warning' }] : []),
+      { text: ')', dim: true },
     ],
   }
 }
@@ -540,7 +557,7 @@ export const prSegment = (pr: Pr): Segment => {
       : pr.review === 'changes'
         ? [{ text: ' changes requested', color: 'warning' }]
         : []
-  return { key: 'pr', sep: ' · ', keep: 70, runs: [{ text: `PR #${pr.number}`, color: 'suggestion', href: linkOf(pr.url) }, ...state, ...checks, ...review] }
+  return { key: 'pr', sep: ' │ ', keep: 70, runs: [{ text: `PR #${pr.number}`, color: 'suggestion', href: linkOf(pr.url) }, ...state, ...checks, ...review] }
 }
 
 // An address the band will open: a web page's alone, whatever a command printed.
@@ -551,7 +568,7 @@ export const gitTrouble = (git: Git) =>
   [...(git.op ? [`${OP_WORDS[git.op.kind]}${stepOf(git.op)}`] : []), ...(git.conflicts > 0 ? [plural(git.conflicts, 'conflict')] : [])].join(', ')
 
 /** Lines a patch adds and removes: its hunks' `+` and `-` rows. */
-export const patchLines = (hunks: readonly { lines: readonly string[] }[]) => {
+const patchLines = (hunks: readonly { lines: readonly string[] }[]) => {
   let added = 0
   let removed = 0
   for (const h of hunks) {
