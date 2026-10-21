@@ -5,30 +5,30 @@ import type { Theme } from '../theme'
 // A blocky green Creeper-inspired face, drawn from the provided pixel-art reference.
 // Its dark eyes and H-shaped mouth sit in a shaded green head.
 const FACE = [
-  '..kkkkkkkkkk..',
-  '..kGGGGGGGGk..',
-  '..kGggggggGk..',
-  '..kGggggggGk..',
-  '..kGggggggGk..',
-  '..kGggggggGk..',
-  '..kGggggggGk..',
-  '..kGggggggGk..',
-  '..kGggggggGk..',
-  '..kkkkkkkkkk..',
+  '.kGggGGggGgGk.',
+  '.kggGgGGgGggk.',
+  '.kGgGggGgGgGk.',
+  '.kggGGgGggGGk.',
+  '.kgGgGGggGgGk.',
+  '.kGGggGgGGggk.',
+  '.kgGGggGGgGgk.',
+  '.kGGgGggGGgGk.',
+  '.kgGgGGgGggGk.',
+  '.kGggGgGGggGk.',
 ]
 
-// Both eyes at once, two pixels wide, beginning at row 2.
-const eyes = (...rows: string[]): Patch[] => rows.flatMap((r, i) => [[3, 2 + i, r], [9, 2 + i, r]] as Patch[])
+// Both eyes at once, three pixels wide, beginning at row 2.
+const eyes = (...rows: string[]): Patch[] => rows.flatMap((r, i) => [[2, 2 + i, r], [9, 2 + i, r]] as Patch[])
 
-const OPEN_EYES = eyes('nn', 'nn')
-const MOUTH: Patch[] = [[6, 4, 'nn'], [4, 5, 'nnnnnn'], [4, 6, 'nnnnnn'], [4, 7, 'nn  nn'], [4, 8, 'nn  nn'], [4, 9, 'nn  nn']]
-const BLINK = eyes('gg', 'gg')
-const LOOK_LEFT = eyes('dn', 'dn')
-const LOOK_UP = eyes('nn', 'dd')
-const WIDE: Patch[] = [...eyes('nnn', 'nnn'), [2, 2, 'n'], [8, 2, 'n']]
-const HAPPY = eyes('GG', 'gg')
-const ALARM_MOUTH: Patch[] = [[5, 4, 'nnnn'], [4, 5, 'nnnnnn'], [4, 6, 'nnnnnn'], [4, 7, 'nnnnnn'], [4, 8, 'nnnnnn'], [4, 9, 'nnnnnn']]
-const GRIN: Patch[] = [[5, 5, 'nnnn'], [4, 6, 'nnnnnn'], [4, 7, 'nn  nn'], [4, 8, 'nn  nn'], [4, 9, 'nn  nn']]
+const OPEN_EYES = eyes('nnn', 'nnn')
+const MOUTH: Patch[] = [[5, 4, 'nnnn'], [3, 5, 'nnnnnnnn'], [3, 6, 'nnnnnnnn'], [3, 7, 'nn    nn'], [3, 8, 'nn    nn'], [3, 9, 'nn    nn']]
+const BLINK = eyes('ggg', 'ggg')
+const LOOK_LEFT = eyes('dnn', 'dnn')
+const LOOK_UP = eyes('nnd', 'nnd')
+const WIDE: Patch[] = eyes('nnnn', 'nnnn')
+const HAPPY = eyes('GGG', 'ggg')
+const ALARM_MOUTH: Patch[] = [[5, 4, 'nnnn'], [3, 5, 'nnnnnnnn'], [3, 6, 'nnnnnnnn'], [3, 7, 'nnnnnnnn'], [3, 8, 'nnnnnnnn'], [3, 9, 'nnnnnnnn']]
+const GRIN: Patch[] = [[5, 5, 'nnnn'], [3, 6, 'nnnnnnnn'], [3, 7, 'nn    nn'], [3, 8, 'nn    nn'], [3, 9, 'nn    nn']]
 const face = (...groups: (readonly Patch[])[]) => paint(FACE, OPEN_EYES, MOUTH, ...groups)
 const PROP = stamp(14, 2, ['.k.', 'kgk', 'knk', '.k.'])
 
@@ -49,13 +49,13 @@ const moods: Theme['moods'] = {
 export const creeper: Theme = {
   description: 'a green Creeper-inspired pixel mascot with square eyes and a blocky mouth',
   sounds: { done: 'sounds/creeper/done.wav', error: 'sounds/creeper/error.wav', waiting: 'sounds/creeper/waiting.wav', party: 'sounds/creeper/party.wav' },
-  accent: '#00aa00',
+  accent: '#77aa44',
   onAccent: '#111111',
   palette: {
-    k: 0x004400,
-    g: 0x00aa00,
-    G: 0x00cc00,
-    d: 0x007700,
+    k: 0x333333,
+    g: 0x77aa77,
+    G: 0xaacc77,
+    d: 0x44aa44,
     n: 0x111111,
     c: 0x44aaff,
     r: 0xff4444,
