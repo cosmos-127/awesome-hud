@@ -1,6 +1,6 @@
 {
   "name": "awesome-hud",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Animated pixel mascots under the prompt that react to what Claude is doing, with optional themed sounds and a compact status bar",
   "author": {
     "name": "cosmos-127",

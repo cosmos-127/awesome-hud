@@ -1,0 +1,38 @@
+name: Bug report
+description: Something in awesome-hud does not work, or does not look right
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw and what you expected instead. A screenshot of the HUD helps.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: awesome-hud version
+      description: Shown in `/plugin`.
+      placeholder: 0.4.1
+    validations:
+      required: true
+  - type: input
+    id: claude-code
+    attributes:
+      label: Claude Code version
+      description: Run `claude --version`.
+      placeholder: 2.1.306
+    validations:
+      required: true
+  - type: input
+    id: terminal
+    attributes:
+      label: Terminal and OS
+      description: For a drawing or color problem, the terminal and its version, the OS, and whether you use tmux or SSH.
+      placeholder: macOS Terminal 2.14 on macOS 15, no tmux
+  - type: textarea
+    id: settings
+    attributes:
+      label: HUD settings
+      description: Anything you changed in `/config`, such as the theme, layout, position, symbols, sounds, or PR status.

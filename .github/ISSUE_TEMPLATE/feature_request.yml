@@ -1,0 +1,16 @@
+name: Idea or theme request
+description: Suggest a change, or a mascot for a new theme
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like
+      description: What it would do, and what you do today instead. For a theme, the mascot and what makes it more than a recolor.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it helps
+      description: The HUD stays small on purpose. Say what it would show or do that Claude Code does not already.
