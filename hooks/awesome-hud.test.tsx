@@ -793,10 +793,10 @@ test('switching theme draws its mascot at twice the size under the command line'
     const { Text } = $.ui.resolve(e)
     return <Text>{e.props.text}</Text>
   })
-  const props = { command: 'awesome-hud', args: 'got', text: 'Theme: got', isErrored: false }
+  const props = { command: 'awesome-hud', args: 'creeper', text: 'Theme: creeper', isErrored: false }
   const row = await $.ui.mount({ plugin: 'awesome-hud', component: 'CommandOutput', surface: 'terminal', props })
   const texts = (await row.findAll({ type: 'Text' })).map(t => t.text)
-  expect(texts).toContain('Theme: got')
+  expect(texts).toContain('Theme: creeper')
   const portrait = await row.find({ key: 'portrait' })
   expect(portrait?.props.columns).toBe(WIDTH * 2)
   expect(portrait?.props.rows).toBe(HEIGHT)

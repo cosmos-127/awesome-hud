@@ -15,9 +15,9 @@
     "theme": {
       "type": "string",
       "title": "Theme",
-      "description": "Who sits by the prompt: cat, an orange cat with opinions; chibi, big eyes and anime feelings; got, a direwolf of the North; hamster, a cream hamster with a wheel and full cheeks; duck, a rubber duck that listens to your bugs; axolotl, a smiling axolotl that regrows what breaks; bunny, a white bunny whose ears say it all. /awesome-hud <theme> sets this too.",
+      "description": "Who sits by the prompt: cat, an orange cat with opinions; chibi, big eyes and anime feelings; creeper, a green pixel mascot with square eyes and a blocky mouth; hamster, a cream hamster with a wheel and full cheeks; duck, a rubber duck that listens to your bugs; axolotl, a smiling axolotl that regrows what breaks; bunny, a white bunny whose ears say it all. /awesome-hud <theme> sets this too.",
       "default": "cat",
-      "options": ["cat", "chibi", "got", "hamster", "duck", "axolotl", "bunny"]
+      "options": ["cat", "chibi", "creeper", "hamster", "duck", "axolotl", "bunny"]
     },
     "position": {
       "type": "string",

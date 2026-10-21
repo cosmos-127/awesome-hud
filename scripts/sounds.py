@@ -160,32 +160,30 @@ SOUNDS = {
             (0.22, bell(0.6, 3136, decay=0.4, gain=0.25)),
         ),
     },
-    'got': {
-        # a war horn: a low brass note with its fifth, bending up as it sounds
-        'done': lambda: lowpass(mix(
-            (0, voice(1.1, glide((0, 140), (0.18, 147)), 'brass', attack=0.14, release=0.35, vibrato=(5, 0.006))),
-            (0.05, voice(1.05, glide((0, 210), (0.18, 220)), 'brass', attack=0.16, release=0.35, gain=0.45)),
-        ), 0.82),
-        # a sword clang: bright inharmonic ring after a hard hit
-        'error': lambda: mix(
-            (0, noise(0.04, release=0.03, smooth=0.2, bright=True, gain=0.8)),
-            (0, voice(0.7, 1180, decay=0.3)), (0, voice(0.7, 2470, decay=0.2, gain=0.6)),
-            (0, voice(0.7, 3720, decay=0.13, gain=0.4)), (0, voice(0.7, 5260, decay=0.08, gain=0.25)),
+    'creeper': {
+        # A short fuse hiss ending in a soft, low pop.
+        'done': lambda: mix(
+            (0, noise(0.32, attack=0.01, release=0.1, smooth=0.82, bright=True, gain=0.35, seed=12)),
+            (0.24, voice(0.24, glide((0, 110), (0.24, 55)), 'sine', attack=0.002, release=0.12, decay=0.12, gain=0.8)),
+            (0.24, noise(0.035, attack=0.001, release=0.03, smooth=0.2, gain=0.6, seed=13)),
         ),
-        # a raven: two rough caws
-        'waiting': lambda: mix(*[(start, mix(
-            (0, voice(0.2, glide((0, 640), (0.2, 470)), 'square', attack=0.01, release=0.05, gain=0.35,
-                      tremolo=lambda t: 0.6 + 0.4 * math.sin(2 * math.pi * 45 * t))),
-            (0, noise(0.2, attack=0.01, release=0.06, smooth=0.75, gain=0.5, seed=seed)),
-        )) for start, seed in ((0, 1), (0.3, 2))]),
-        # a fanfare of horns over a drum
-        'party': lambda: lowpass(mix(
-            (0, voice(0.15, 294, 'brass', attack=0.02, release=0.04, gain=0.8)),
-            (0.16, voice(0.15, 440, 'brass', attack=0.02, release=0.04, gain=0.8)),
-            (0.32, voice(0.5, 587, 'brass', attack=0.02, release=0.2, vibrato=(6, 0.01), gain=0.8)),
-            (0.32, voice(0.3, glide((0, 90), (0.3, 50)), decay=0.12, gain=1.2)),
-            (0.32, noise(0.12, release=0.1, smooth=0.9, gain=1.5, seed=3)),
-        ), 0.7),
+        # A fizz and a low thud for a failed build.
+        'error': lambda: mix(
+            (0, noise(0.25, attack=0.005, release=0.13, smooth=0.55, bright=True, gain=0.6, seed=14)),
+            (0.04, voice(0.38, glide((0, 150), (0.38, 65)), 'sine', attack=0.002, release=0.12, decay=0.16, gain=0.8)),
+        ),
+        # Two soft electronic blips ask for the next signal.
+        'waiting': lambda: mix(
+            (0, voice(0.16, 660, 'square', attack=0.004, release=0.07, decay=0.18, gain=0.28)),
+            (0.2, voice(0.2, 880, 'square', attack=0.004, release=0.08, decay=0.2, gain=0.28)),
+        ),
+        # A little 8-bit fanfare over a soft, pixelated pop.
+        'party': lambda: mix(
+            (0, notes([392, 494, 587, 784], 0.075, lambda f, last: voice(0.16 if last else 0.075, f, 'square', release=0.02,
+                                                                          decay=0.12 if last else None, gain=0.35))),
+            (0.29, voice(0.23, glide((0, 180), (0.23, 85)), 'sine', attack=0.002, release=0.12, decay=0.14, gain=0.65)),
+            (0.29, noise(0.025, attack=0.001, release=0.02, smooth=0.2, gain=0.35, seed=15)),
+        ),
     },
     'hamster': {
         # eek-eek: two quick squeaks, each higher than the last

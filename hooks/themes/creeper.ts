@@ -1,0 +1,139 @@
+import { BANG, QUESTION, SMALL_Z, SPARKLE, frame, paint, shift, stamp } from '../sprite'
+import type { Patch } from '../sprite'
+import type { Theme } from '../theme'
+
+// A blocky green Creeper-inspired face, drawn from the provided pixel-art reference.
+// Its dark eyes and H-shaped mouth sit in a shaded green head.
+const FACE = [
+  '..kkkkkkkkkk..',
+  '..kGGGGGGGGk..',
+  '..kGggggggGk..',
+  '..kGggggggGk..',
+  '..kGggggggGk..',
+  '..kGggggggGk..',
+  '..kGggggggGk..',
+  '..kGggggggGk..',
+  '..kGggggggGk..',
+  '..kkkkkkkkkk..',
+]
+
+// Both eyes at once, two pixels wide, beginning at row 2.
+const eyes = (...rows: string[]): Patch[] => rows.flatMap((r, i) => [[3, 2 + i, r], [9, 2 + i, r]] as Patch[])
+
+const OPEN_EYES = eyes('nn', 'nn')
+const MOUTH: Patch[] = [[6, 4, 'nn'], [4, 5, 'nnnnnn'], [4, 6, 'nnnnnn'], [4, 7, 'nn  nn'], [4, 8, 'nn  nn'], [4, 9, 'nn  nn']]
+const BLINK = eyes('gg', 'gg')
+const LOOK_LEFT = eyes('dn', 'dn')
+const LOOK_UP = eyes('nn', 'dd')
+const WIDE: Patch[] = [...eyes('nnn', 'nnn'), [2, 2, 'n'], [8, 2, 'n']]
+const HAPPY = eyes('GG', 'gg')
+const ALARM_MOUTH: Patch[] = [[5, 4, 'nnnn'], [4, 5, 'nnnnnn'], [4, 6, 'nnnnnn'], [4, 7, 'nnnnnn'], [4, 8, 'nnnnnn'], [4, 9, 'nnnnnn']]
+const GRIN: Patch[] = [[5, 5, 'nnnn'], [4, 6, 'nnnnnn'], [4, 7, 'nn  nn'], [4, 8, 'nn  nn'], [4, 9, 'nn  nn']]
+const face = (...groups: (readonly Patch[])[]) => paint(FACE, OPEN_EYES, MOUTH, ...groups)
+const PROP = stamp(14, 2, ['.k.', 'kgk', 'knk', '.k.'])
+
+const moods: Theme['moods'] = {
+  idle: [frame(face(PROP), 1800), frame(face(PROP, BLINK), 140), frame(face(PROP), 900)],
+  working: [frame(face(LOOK_LEFT), 520), frame(face(), 520), frame(face(LOOK_LEFT), 520), frame(face(BLINK), 140)],
+  waiting: [
+    frame(paint(face(), stamp(14, 0, QUESTION)), 650),
+    frame(face(LOOK_UP), 300),
+  ],
+  error: [frame(paint(face(WIDE, ALARM_MOUTH), stamp(14, 1, BANG)), 420), frame(face(WIDE, ALARM_MOUTH), 160)],
+  done: [frame(paint(face(HAPPY, GRIN), stamp(15, 0, SPARKLE)), 500), frame(paint(face(HAPPY, GRIN), stamp(14, 5, SPARKLE)), 500)],
+  party: [0, 1, 2, 3].map(t => frame(paint(shift(face(HAPPY, GRIN, PROP), 0, t % 2), stamp(14, 2, SPARKLE)), 140)),
+  sweat: [0, 1, 2].map((y, i) => frame(paint(face(LOOK_LEFT), stamp(14, y, ['.c.', 'ccc', '.c.'])), [700, 450, 350][i]!)),
+  asleep: [0, 1, 2].map(t => frame(paint(face(BLINK), t < 2 ? stamp(15, 4 - 2 * t, SMALL_Z) : []), 1100)),
+}
+
+export const creeper: Theme = {
+  description: 'a green Creeper-inspired pixel mascot with square eyes and a blocky mouth',
+  sounds: { done: 'sounds/creeper/done.wav', error: 'sounds/creeper/error.wav', waiting: 'sounds/creeper/waiting.wav', party: 'sounds/creeper/party.wav' },
+  accent: '#00aa00',
+  onAccent: '#111111',
+  palette: {
+    k: 0x004400,
+    g: 0x00aa00,
+    G: 0x00cc00,
+    d: 0x007700,
+    n: 0x111111,
+    c: 0x44aaff,
+    r: 0xff4444,
+    y: 0xffdd44,
+  },
+  moods,
+  faces: {
+    idle: '[|*|]',
+    working: '[*>*]',
+    waiting: '[|*|]?',
+    error: '[x_x]!',
+    done: '[^_^]',
+    party: '[^o^]~',
+    sweat: '[;_;]',
+    asleep: '[-_-] z',
+  },
+  quips: {
+    idle: [
+      'quietly guarding your blocks',
+      'looking sharp. literally',
+      'waiting for a redstone signal',
+      'one pixel at a time',
+      'standing very still. very',
+      'a Creeper never sleeps (much)',
+    ],
+    working: [
+      'building the next block',
+      'following the redstone trail',
+      'crafting a solution',
+      'mining for the bug',
+      'checking the block code',
+    ],
+    waiting: ['your turn to place a block', 'waiting on your signal', 'need your OK to keep building', 'shall I make it go boom?'],
+    error: [
+      'that block did not place right',
+      'a creeper snuck into the build',
+      'hiss. that did not work',
+      'well, that escalated quickly',
+      'one too many blocks',
+    ],
+    done: ['build complete', 'all blocks in place', 'that is a solid build', 'mission accomplished'],
+    party: ['a tiny block party!'],
+    sweat: ['context is getting explosive', 'the fuse is getting short', 'too many blocks in the stack', 'careful, I might pop'],
+    asleep: ['sleeping in a dirt hut', 'dreaming of diamond blocks', 'do not wake the Creeper', 'zzz... still standing'],
+  },
+  party: {
+    tests: 'tests green! everything is lit',
+    commit: 'committed! another block placed',
+    push: 'pushed! build sent to the server',
+    summoned: 'ssss... you called?',
+  },
+  verbs: {
+    Read: 'inspecting {}',
+    Edit: 'placing a block in {}',
+    MultiEdit: 'placing blocks in {}',
+    NotebookEdit: 'crafting {}',
+    Write: 'building {}',
+    Bash: 'igniting {}',
+    Grep: 'mining {}',
+    Glob: 'scouting for {}',
+    WebFetch: 'fetching {} from the server',
+    WebSearch: 'searching the wiki for {}',
+    Agent: 'sending a helper to {}',
+    TodoWrite: 'checking the build list',
+    Skill: 'learning how to craft {}',
+    default: 'working on {}',
+  },
+  spinner: {
+    thinking: ['Crafting', 'Mining', 'Following redstone', 'Checking the recipe'],
+    requesting: ['Hissing at the server', 'Sending a block'],
+    responding: ['Building the reply', 'Placing the final block'],
+    'tool-input': ['Lighting the fuse', 'Gathering blocks'],
+    'tool-use': ['Mining', 'Crafting', 'Building'],
+  },
+  turn: {
+    plain: ['Built', 'Crafted', 'Mined', 'Placed', 'Explored', 'Gathered blocks'],
+    errors: n => `Survived ${n} blast${n === 1 ? '' : 's'}, then rebuilt`,
+    party: 'Lit the fuse',
+  },
+  compactNudge: 'context almost full: /compact before the fuse gets short',
+}
