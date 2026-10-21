@@ -98,6 +98,35 @@ def notes(freqs, step, make):
     return mix(*[(i * step, make(f, i == len(freqs) - 1)) for i, f in enumerate(freqs)])
 
 
+def chirp(f0, f1, dur=0.1, gain=1.0):
+    """A squeak: a quick glide from f0 to f1, a little wobble on it."""
+    return voice(dur, glide((0, f0), (dur * 0.5, f1), (dur, (f0 + f1) / 2)), 'soft', attack=0.004, release=0.04,
+                 vibrato=(34, 0.025), gain=gain)
+
+
+def quack(f0, f1, dur=0.24, gain=1.0):
+    """A quack: a buzzy honk bending from f0 to f1, softened."""
+    return lowpass(voice(dur, glide((0, f0), (dur * 0.3, (f0 + f1) / 2), (dur, f1)), 'brass', attack=0.01, release=0.06,
+                         tremolo=lambda t: 0.65 + 0.35 * math.sin(2 * math.pi * 62 * t), gain=gain), 0.55)
+
+
+def bubble(f0, f1, dur=0.12, gain=1.0):
+    """A bubble rising: a quick glide up, gone at once."""
+    return voice(dur, glide((0, f0), (dur, f1)), 'sine', attack=0.004, release=0.04, decay=dur * 0.6, gain=gain)
+
+
+def pluck(f, dur=0.2, gain=1.0):
+    """A soft marimba note: the pitch, and a quick overtone two octaves up."""
+    return mix((0, voice(dur, f, 'sine', attack=0.003, release=0.05, decay=dur * 0.4, gain=gain)),
+               (0, voice(dur, f * 4, 'sine', attack=0.002, release=0.02, decay=0.03, gain=gain * 0.25)))
+
+
+def thump(f=130, dur=0.14, gain=1.0):
+    """A foot on the ground: a low drop in pitch, a click on the front of it."""
+    return mix((0, voice(dur, glide((0, f * 1.5), (dur, f * 0.7)), 'sine', attack=0.002, release=0.04, decay=0.05, gain=gain)),
+               (0, noise(0.012, attack=0.001, release=0.01, smooth=0.3, gain=0.5 * gain, seed=7)))
+
+
 SOUNDS = {
     'cat': {
         # mrrp: a rolled "mrr" rising into a chirp
@@ -157,6 +186,71 @@ SOUNDS = {
             (0.32, voice(0.3, glide((0, 90), (0.3, 50)), decay=0.12, gain=1.2)),
             (0.32, noise(0.12, release=0.1, smooth=0.9, gain=1.5, seed=3)),
         ), 0.7),
+    },
+    'hamster': {
+        # eek-eek: two quick squeaks, each higher than the last
+        'done': lambda: mix((0, chirp(1500, 2400)), (0.15, chirp(1800, 2900, 0.12))),
+        # eep! a squeak thrown up and dropping away, with a puff of air
+        'error': lambda: mix(
+            (0, voice(0.26, glide((0, 2300), (0.05, 2700), (0.26, 800)), 'soft', attack=0.003, release=0.08,
+                      vibrato=(40, 0.04), decay=0.5)),
+            (0, noise(0.06, release=0.04, smooth=0.5, bright=True, gain=0.3, seed=4)),
+        ),
+        # squeak? squeak?: each rising at its end
+        'waiting': lambda: mix((0, chirp(1200, 2300, 0.16)), (0.24, chirp(1400, 2700, 0.18))),
+        # the wheel at full tilt, a run of squeaks over it
+        'party': lambda: mix(
+            *[(i * 0.045, noise(0.014, attack=0.001, release=0.012, bright=True, gain=0.5, seed=i + 5)) for i in range(14)],
+            (0.08, notes([1568, 1976, 2349, 3136], 0.085, lambda f, last: chirp(f, f * 1.25, 0.14 if last else 0.08, 0.5))),
+        ),
+    },
+    'duck': {
+        # a rubber squeak: a high glide up and back, with a wobble
+        'done': lambda: mix(
+            (0, voice(0.3, glide((0, 760), (0.1, 1900), (0.3, 1350)), 'sine', attack=0.01, release=0.08, vibrato=(16, 0.05))),
+            (0, voice(0.3, glide((0, 1520), (0.1, 3800), (0.3, 2700)), 'sine', attack=0.01, release=0.08, vibrato=(16, 0.05), gain=0.3)),
+        ),
+        # a quack, falling away
+        'error': lambda: quack(560, 300, 0.28),
+        # quack? the second bending up
+        'waiting': lambda: mix((0, quack(470, 360, 0.15, 0.8)), (0.2, quack(360, 640, 0.22))),
+        # bath party: a splash, and bubbles popping over it
+        'party': lambda: mix(
+            (0, noise(0.3, attack=0.01, release=0.2, smooth=0.7, gain=0.8, seed=6)),
+            *[(0.05 + i * 0.058, voice(0.07, glide((0, f), (0.07, f * 1.5)), 'sine', attack=0.003, release=0.03, decay=0.03, gain=0.6))
+              for i, f in enumerate([900, 1150, 820, 1340, 1010, 1560, 1200, 1800])],
+        ),
+    },
+    'axolotl': {
+        # blup-blup
+        'done': lambda: mix((0, bubble(380, 900)), (0.15, bubble(520, 1250, 0.13))),
+        # blorp: a wobbling drop in pitch
+        'error': lambda: voice(0.42, glide((0, 700), (0.1, 880), (0.42, 130)), 'soft', attack=0.01, release=0.1, decay=0.3,
+                               vibrato=(21, 0.09)),
+        # blup? blup?: each bubble reaching a little higher
+        'waiting': lambda: mix((0, bubble(420, 1000, 0.14)), (0.22, bubble(620, 1600, 0.18))),
+        # a cascade of bubbles, a chime over the top
+        'party': lambda: mix(
+            *[(i * 0.05, bubble(480 * 1.13 ** i, 480 * 1.13 ** i * 1.7, 0.1, 0.7)) for i in range(9)],
+            (0.42, bell(0.5, 2093, decay=0.3, gain=0.4)),
+        ),
+    },
+    'bunny': {
+        # binky: soft notes hopping up
+        'done': lambda: notes([523, 659, 784, 1047], 0.07, lambda f, last: pluck(f, 0.28 if last else 0.14, 0.8)),
+        # thump, thump
+        'error': lambda: mix((0, thump(125)), (0.17, thump(115, 0.16))),
+        # sniff, sniff, sniff: little puffs of air, then a questioning pair of notes
+        'waiting': lambda: mix(
+            *[(i * 0.09, noise(0.07, attack=0.01, release=0.04, smooth=0.55, bright=True, gain=0.35, seed=8 + i)) for i in range(3)],
+            (0.32, pluck(587, 0.12, 0.6)), (0.4, pluck(784, 0.22, 0.7)),
+        ),
+        # hops: a run up and down, a thump under every landing
+        'party': lambda: mix(
+            (0, notes([523, 659, 784, 1047, 784, 659, 1047, 1319], 0.065, lambda f, last: pluck(f, 0.3 if last else 0.1, 0.6))),
+            *[(i * 0.13, thump(150, 0.07, 0.5)) for i in range(4)],
+            (0.5, bell(0.5, 2637, decay=0.25, gain=0.3)),
+        ),
     },
 }
 

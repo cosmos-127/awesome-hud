@@ -159,7 +159,7 @@ def preview(themes):
 
 
 def moods(themes):
-    scale, pad, label_w, head_h, tick, total = 5, 12, 60, 34, 70, 8000
+    scale, pad, label_w, head_h, tick, total = 5, 12, 72, 34, 70, 8000
     cell_w, cell_h = 18 * scale + pad, 10 * scale + pad
     w, h = label_w + cell_w * len(MOODS), head_h + cell_h * len(themes)
     font = ImageFont.truetype(FONT, 14)

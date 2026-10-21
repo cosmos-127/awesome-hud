@@ -57,9 +57,13 @@ const BRANCH_CLUSTER = 20
 const BELOW_MIN_TERMINAL_ROWS = 25
 // Edits come in bursts: the band's git counts follow once one pauses this long.
 const EDIT_PAUSE_MS = 1_500
+// Git moved outside Claude (another terminal, an editor, a `!` command): the band looks again this often.
+const GIT_EVERY_MS = 15_000
 // With PR status on, checks move on GitHub's side: they are read again this many minutes apart while the person is about.
 const PR_EVERY_MINUTES = 5
 const PR_AWAY_MS = 30 * 60_000
+// An agent's end may land after its last turn's: while any is listed at work, the list is read again this often.
+const AGENTS_EVERY_MS = 15_000
 // A test run's saved output past this size is read from its end alone, where the summary is.
 const OUTPUT_READ_BYTES = 2 ** 20
 
@@ -108,8 +112,6 @@ let isSlowRepo = false
 let gitRun: Promise<void> | undefined
 let isGitAgain = false
 let gitSoon: Timer | undefined
-// The times of the files git writes on a commit, checkout, add, stash or fetch, when the last status ran.
-let gitMarks = ''
 // One gh at a time, like the status: a refresh asked for while one runs has it run once more after.
 let prRun: Promise<void> | undefined
 let isPrAgain = false
@@ -255,14 +257,8 @@ async function opOf($: EngineInterface, gitDir: string): Promise<(GitOp & { bran
   return null
 }
 
-// The files git writes on a commit, checkout, reset, add, stash or fetch: their times move when the repository does.
-// FETCH_HEAD's time is also when the last fetch ran.
-const marksOf = async ($: EngineInterface, at: Repo) => {
-  const paths = [`${at.gitDir}/HEAD`, `${at.gitDir}/index`, `${at.gitDir}/logs/HEAD`, `${at.commonDir}/refs/stash`]
-  const statOf = (path: string) => $.fs.stat(path).then(s => s.mtimeMs, () => 0)
-  const [times, fetchedAt] = await Promise.all([Promise.all(paths.map(statOf)), statOf(`${at.commonDir}/FETCH_HEAD`)])
-  return { marks: [...times, fetchedAt].join(' '), fetchedAt }
-}
+// When the last fetch ran: FETCH_HEAD's time, 0 where there was none.
+const fetchedAtOf = ($: EngineInterface, at: Repo) => $.fs.stat(`${at.commonDir}/FETCH_HEAD`).then(s => s.mtimeMs, () => 0)
 
 // With no upstream, ahead is what no remote has yet, where there is a remote to have it.
 async function unpushedOf($: EngineInterface, at: Repo, status: GitStatus, branch: string | null) {
@@ -281,16 +277,14 @@ async function readGit($: EngineInterface) {
     await update($, git, () => null)
     return
   }
-  const [headText, ran, op, marks, now, prev] = await Promise.all([
+  const [headText, ran, op, fetchedAt, now, prev] = await Promise.all([
     $.fs.read(`${at.gitDir}/HEAD`).catch(() => ''),
     statusOf($, at),
     opOf($, at.gitDir),
-    marksOf($, at),
+    fetchedAtOf($, at),
     $.clock.now(),
     read($, git),
   ])
-  gitMarks = marks.marks
-  const { fetchedAt } = marks
   const head = headOf(headText)
   const status = ran?.status
   const next = gitOf({
@@ -331,9 +325,10 @@ const gitAfterEdits = ($: EngineInterface) => {
   gitSoon = $.clock.after(EDIT_PAUSE_MS, () => void refreshGit($))
 }
 
-// Whether the repository moved since the last status: the session's directory changed, or git wrote its own files.
-// Before git has answered once (out of time, or no git at all) a turn's end or a prompt asks again, not the clock.
-// A folder found to be no repository is one once it has a `.git` (a `git init` elsewhere).
+// Whether the band's git is due a read on the timer: the session's directory changed, or there is a repository, whose
+// tree moves with no file of git's own to show for it (an edit nobody staged, in another terminal or an editor), so a
+// status is its only check. Before git has answered once (out of time, or no git at all) a turn's end or a prompt asks
+// again, not the clock. A folder found to be no repository is one once it has a `.git` (a `git init` elsewhere).
 async function gitMoved($: EngineInterface) {
   if (known === undefined) return false
   const cwd = await $.session.cwd().catch(() => undefined)
@@ -344,7 +339,7 @@ async function gitMoved($: EngineInterface) {
     known = undefined
     return true
   }
-  return (await marksOf($, known.repo)).marks !== gitMarks
+  return true
 }
 
 // What a command did to git: the commit or pull request Claude Code saw it make kept, and the band's git read again.
@@ -706,11 +701,20 @@ export const register: Register = (on, options) => {
       await update($, minute, n => n + 1)
       const now = await $.clock.now()
       if (current === 'idle' && now - lastActive > SLEEP_AFTER_MS) await setMood($, 'asleep')
-      // An agent's end may land after its last turn's: look again while any is listed at work.
+      if (isPrStatus && now - lastActive < PR_AWAY_MS) {
+        const [minutes, prNow] = await Promise.all([read($, minute), read($, pr)])
+        // Checks running are read every minute: one about to pass should not wait five.
+        if (minutes % PR_EVERY_MINUTES === 0 || (prNow?.checks?.pending ?? 0) > 0) void refreshPr($)
+      }
+    })
+
+    $.clock.every(AGENTS_EVERY_MS, async () => {
       if ((await read($, agents)).length > 0) void refreshAgents($)
-      // Git moved outside Claude (another terminal, an editor, a `!` command): the band catches up within the minute.
-      if (await gitMoved($)) void refreshGit($)
-      if (isPrStatus && (await read($, minute)) % PR_EVERY_MINUTES === 0 && now - lastActive < PR_AWAY_MS) void refreshPr($)
+    })
+
+    $.clock.every(GIT_EVERY_MS, async () => {
+      // A status still running is not asked for again: a slow repository would have them queue up.
+      if (!gitRun && (await gitMoved($))) void refreshGit($)
     })
 
     const themes = Object.keys(THEMES).join('|')

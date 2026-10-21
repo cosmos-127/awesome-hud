@@ -454,6 +454,19 @@ test('at rest every theme draws beside its face, so no gap opens between the mas
   for (const t of Object.values(THEMES)) expect(t.moods.idle[0]!.px.some(row => /[^.]/.test(row.slice(14)))).toBe(true)
 })
 
+test('every theme speaks in every mood, and says it in plain ASCII', async () => {
+  for (const [name, t] of Object.entries(THEMES)) {
+    const slots = [...Object.entries(t.quips), ...Object.entries(t.spinner), ['turn.plain', t.turn.plain]] as [string, readonly string[]][]
+    // A list with nothing in it would have the band say "undefined".
+    expect(slots.filter(([, words]) => words.length === 0).map(([slot]) => `${name}.${slot}`)).toEqual([])
+    expect(Object.keys(t.quips).sort()).toEqual(Object.keys(t.moods).sort())
+    expect(Object.keys(t.party).sort()).toEqual(['commit', 'push', 'summoned', 'tests'])
+    expect(t.verbs.default).toContain('{}')
+    const words = [t.description, t.compactNudge, t.turn.party, t.turn.errors(1), t.turn.errors(3), ...Object.values(t.party), ...Object.values(t.verbs), ...slots.flatMap(([, w]) => w)]
+    expect(words.filter(w => /[^\x20-\x7e]/.test(w)).map(w => `${name}: ${w}`)).toEqual([])
+  }
+})
+
 test('every theme has a sound for every event, and none is named files', async () => {
   for (const [name, t] of Object.entries(THEMES)) {
     expect(Object.keys(t.sounds).sort()).toEqual(['done', 'error', 'party', 'waiting'])
@@ -950,6 +963,19 @@ test('/awesome-hud <theme> switches and keeps the choice in /config', async ($, 
   expect(saved).toHaveLength(1)
 })
 
+test('every theme can be switched to by name, and /awesome-hud lists them all', async ($, on) => {
+  mock.clock(on)
+  const saved: unknown[] = []
+  on('config.set', ($, e) => (saved.push([e.key, e.value]), { value: e.value }))
+  on('ui.blit', () => ({ value: {} }))
+  const typed = { command: 'awesome-hud', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 100 } } as const
+  const names = Object.keys(THEMES)
+  for (const name of names) expect((await $.command.run({ ...typed, args: name })).text).toBe(`Theme: ${name}`)
+  expect(saved).toEqual(names.map(name => ['awesome-hud.theme', name]))
+  const list = (await $.command.run({ ...typed, args: '' })).text ?? ''
+  for (const name of names) expect(list).toContain(`${name}: ${THEMES[name]!.description}`)
+})
+
 test('/awesome-hud files: one line for the model, and under it each file Claude edited as git has it now', async ($, on) => {
   mock.clock(on)
   linuxHost(on, { status: STATUS('main', '1 .M N... 100644 100644 100644 x y src/a.ts', '? src/new.ts'), env: { HOME: '/home/me' } })
@@ -1269,7 +1295,7 @@ test('a status that runs out of time keeps the branch and its last counts, dim, 
   await quick.unmount()
 })
 
-test('git moving outside Claude reaches the band within the minute', async ($, on) => {
+test('git moving outside Claude reaches the band within seconds', async ($, on) => {
   const clock = mock.clock(on)
   const files: Record<string, string> = {}
   const times: Record<string, number> = { '/p/.git/HEAD': 1 }
@@ -1292,7 +1318,30 @@ test('git moving outside Claude reaches the band within the minute', async ($, o
   await after.unmount()
 })
 
-test('a folder made a repository outside Claude reaches the band within the minute', async ($, on) => {
+test('an edit nobody staged, made outside Claude, reaches the band within seconds', async ($, on) => {
+  const clock = mock.clock(on)
+  let status = STATUS('main')
+  // No git file's time moves: an unstaged edit touches the tree alone.
+  linuxHost(on, { status: () => status, times: { '/p/.git/HEAD': 1, '/p/.git/index': 1 } })
+  bandHost(on, '/p')
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200_000 }, rateLimits: [] } }))
+  on('command.register', () => ({ value: { command: 'awesome-hud' } }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(0)
+  const before = await $.ui.mount(HINT)
+  expect(await before.find({ type: 'Text', text: /^⎇ main$/ })).toBeDefined()
+  expect(await before.find({ type: 'Text', text: /^✚ / })).toBeUndefined()
+  await before.unmount()
+  // The other terminal edits a tracked file.
+  status = STATUS('main', '1 .M N... 100644 100644 100644 x y a.ts')
+  await clock.advance(15_000)
+  const after = await $.ui.mount(HINT)
+  expect(await after.find({ type: 'Text', text: /^⎇ main +│ ✚ 1$/ })).toBeDefined()
+  await after.unmount()
+})
+
+test('a folder made a repository outside Claude reaches the band within seconds', async ($, on) => {
   const clock = mock.clock(on)
   let isRepo = false
   linuxHost(on, { isRepo: () => isRepo })
@@ -1346,6 +1395,57 @@ test("with PR status on, the repo row reads the branch's pull request from gh: i
   expect((await band.find({ type: 'Text', text: /^ approved$/ }))?.props.color).toBe('success')
   await band.unmount()
   expect(ran.find(argv => argv[0] === 'gh')).toEqual(['gh', 'pr', 'view', '--json', 'number,url,state,isDraft,reviewDecision,statusCheckRollup'])
+})
+
+test('with PR status on, checks still running are read every minute, settled ones every five', { options: { prStatus: true } }, async ($, on) => {
+  const clock = mock.clock(on)
+  let status = 'IN_PROGRESS'
+  const view = () =>
+    JSON.stringify({ number: 7, url: 'https://github.com/o/r/pull/7', state: 'OPEN', isDraft: false, statusCheckRollup: [{ status, conclusion: status === 'COMPLETED' ? 'SUCCESS' : null }] })
+  const { ran } = linuxHost(on, { gh: () => Promise.resolve(view()) })
+  bandHost(on, '/p')
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200_000 }, rateLimits: [] } }))
+  on('command.register', () => ({ value: { command: 'awesome-hud' } }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(0)
+  const reads = () => ran.filter(argv => argv[0] === 'gh').length
+  expect(reads()).toBe(1)
+  await clock.advance(60_000)
+  expect(reads()).toBe(2)
+  status = 'COMPLETED'
+  await clock.advance(60_000)
+  expect(reads()).toBe(3)
+  // Settled: not again until the fifth minute.
+  await clock.advance(120_000)
+  expect(reads()).toBe(3)
+  await clock.advance(60_000)
+  expect(reads()).toBe(4)
+})
+
+test('an agent listed at work is looked at again within seconds, not at the minute', async ($, on) => {
+  const clock = mock.clock(on)
+  linuxHost(on)
+  bandHost(on)
+  on('turn.start', ($, e) => ({ turnId: e.turnId }))
+  let status: 'running' | 'completed' = 'running'
+  on('agent.list', () => ({ value: [{ id: 'a2', type: 'general-purpose', status, description: 'refactor auth' }] }))
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200_000 }, rateLimits: [] } }))
+  on('command.register', () => ({ value: { command: 'awesome-hud' } }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/home/me/project', surface: 'terminal', isInteractive: true })
+  await $.turn.start({ text: 'a', turnId: 't1' })
+  await $.turn.complete(ANSWERED)
+  await clock.advance(10_000)
+  const working = await $.ui.mount(HINT)
+  expect(await working.find({ type: 'Text', text: /◐ 1 agent: refactor auth$/ })).toBeDefined()
+  await working.unmount()
+  // It ends between turns.
+  status = 'completed'
+  await clock.advance(15_000)
+  const done = await $.ui.mount(HINT)
+  expect(await done.find({ type: 'Text', text: /agent: refactor auth/ })).toBeUndefined()
+  await done.unmount()
 })
 
 test('with PR status on, a push while gh still reads the branch has it read again after', { options: { prStatus: true } }, async ($, on) => {

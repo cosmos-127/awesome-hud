@@ -23,6 +23,10 @@ The band draws in terminal sessions; the desktop app shows no band. Built and te
 | `cat` (default) | an orange tabby with opinions, and a tail that says what it thinks | a mrrp, a hiss, a questioning meow, an 8-bit arpeggio |
 | `chibi` | big violet eyes, a side ponytail, anime feelings | a sparkle, a boing, a ding-dong, a magical fanfare |
 | `got` | a direwolf of the North, in the snow | a war horn, a sword clang, two raven caws, a horn fanfare |
+| `hamster` | a cream hamster: it runs its wheel while Claude works, and its cheeks fill as your context does | a squeak, an eep, a questioning squeak, a wheel and a run of chirps |
+| `duck` | a rubber duck in a bath: it listens to your bugs, and the water rises as your context fills | a rubber squeak, a quack, a questioning quack, bubbles popping |
+| `axolotl` | a smiling axolotl with frilled gills: whatever breaks, it regrows | a bubble blup, a gloopy drop, a questioning blup, a cascade of bubbles |
+| `bunny` | a white bunny whose ears say how it feels, with a carrot to nibble | soft marimba hops, a foot thump, sniffs, a binky run |
 
 Each theme has its own lines for every mood and its own spinner words, and its mascot shows itself at twice the size when you switch to it. `got` is an unofficial fan homage to *Game of Thrones*, not affiliated with or endorsed by HBO. Every picture and sound here is original: the mascots are drawn pixel by pixel and the sounds are synthesized by `scripts/sounds.py`.
 
@@ -92,7 +96,7 @@ Run `/config` and look for the awesome-hud rows.
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| Theme | `cat` | `cat`, `chibi` or `got`. |
+| Theme | `cat` | `cat`, `chibi`, `got`, `hamster`, `duck`, `axolotl` or `bunny`. |
 | Position | `below` | The band under the prompt, or `above` it. |
 | Layout | `full` | The mascot beside five rows of stats, or `compact`: two lines, no mascot. |
 | Symbols | `auto` | The band's marks where the terminal's font has them and ASCII where it may not; `unicode` or `ascii` decides for you. |
