@@ -1,9 +1,10 @@
 import type { On, ToolCallResult } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 
-import type { Git } from '../types'
+import type { FilesReport, Git } from '../types'
 import {
-  branchSegments, cells, costOf, fit, gauge, headOf, isMiss, limitLabel, middle, parseStatus, partyOf, prettyModel, resetTime, shortTool, targetOf, testSegment, testsOf, treeSegments,
+  branchSegments, cells, clean, commandKey, costOf, fit, gauge, headOf, isMiss, isTestCommand, limitLabel, middle, parseStatus, partyOf, prettyModel, reportRows, resetTime, shortTool, targetOf,
+  testSegment, testsOf, treeSegments, verbOf,
 } from './format'
 import type { Segment } from './format'
 import { HEIGHT, WIDTH } from './sprite'
@@ -1650,4 +1651,99 @@ test('tool targets are short and free of control characters', async () => {
   expect(targetOf({ file_path: '/home/me/project/src/auth.ts' })).toBe('auth.ts')
   expect(targetOf({ command: 'echo \u001b[31mhi' })).toBe('echo [31mhi')
   expect(shortTool('mcp__github__create_issue')).toBe('create_issue')
+})
+
+// What a repository, an MCP server, a command or a test run gets to choose: names, and the text the parsers read.
+
+// Each of these once took a second or more: the regexes behind them backtracked on a few dozen tokens, or on tens of
+// thousands of characters. The budget is some hundred times what they take now, so a slow machine passes and a
+// backtracking regex misses it by far.
+const STALL_MS = 250
+const timeOf = (fn: () => unknown) => {
+  const start = performance.now()
+  fn()
+  return performance.now() - start
+}
+
+test('text built to make a parser backtrack cannot stall it', async () => {
+  const hostile: Record<string, () => unknown> = {
+    'git flags that read two ways': () => partyOf(`git${' -c'.repeat(38)} x`),
+    'git run behind a long word that holds starts': () => partyOf(`${'A=b('.repeat(30_000)} git commit`),
+    'a quote that never closes, then escaped quotes': () => partyOf(`"${'\\"'.repeat(30_000)}x`),
+    'a task runner named again and again on one line': () => isTestCommand('make '.repeat(30_000)),
+    'blank lines where a summary may come': () => testsOf('npm test', '\n'.repeat(40_000)),
+    'blank lines with spaces in them': () => testsOf('npm test', ' \n'.repeat(25_000)),
+    'a summary line that is one long number': () => testsOf('npm test', `Tests: ${'1'.repeat(120_000)}`),
+    'a test command padded with white space': () => commandKey(`npm test${' '.repeat(60_000)}x`),
+  }
+  for (const [what, run] of Object.entries(hostile)) expect([what, timeOf(run) < STALL_MS]).toEqual([what, true])
+})
+
+test('a .git/config of nothing but blank lines does not stall the git read', async ($, on) => {
+  const clock = mock.clock(on)
+  linuxHost(on, { status: STATUS('main'), files: { '/p/.git/config': '\n'.repeat(150_000) } })
+  bandHost(on, '/p')
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200_000 }, rateLimits: [] } }))
+  on('command.register', () => ({ value: { command: 'awesome-hud' } }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  const start = performance.now()
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(0)
+  // The harness itself takes some 100 ms to start a session; the config took ten seconds.
+  expect(performance.now() - start).toBeLessThan(2_000)
+  const band = await $.ui.mount(HINT)
+  expect(await band.find({ type: 'Text', text: /^⎇ main/ })).toBeDefined()
+  await band.unmount()
+})
+
+test('a tool or a file named like a member every object has is drawn like any other', async ($, on) => {
+  const clock = mock.clock(on)
+  linuxHost(on)
+  bandHost(on)
+  let finish = () => {}
+  on('tool.call', () => new Promise<ToolCallResult>(resolve => (finish = () => resolve(ranBash('')))))
+  // An MCP server may call its tool anything, `constructor` included: it is no verb of the theme's, so the default reads.
+  expect(verbOf(THEMES.cat!.verbs, 'constructor')).toBe(THEMES.cat!.verbs.default)
+  expect(verbOf(THEMES.cat!.verbs, 'Read')).toBe(THEMES.cat!.verbs.Read)
+  const call = $.tool.call({ tool: 'mcp__srv__constructor' } as never)
+  await clock.advance(0)
+  const band = await $.ui.mount(HINT)
+  expect(await band.find({ type: 'Text', text: /^batting at something$/ })).toBeDefined()
+  await band.unmount()
+  finish()
+  await call
+  // So may a file, and git has no change to list for it: it is clean.
+  const files = ['toString', 'constructor', '__proto__', 'valueOf'].map(name => ({ path: `/p/${name}`, edits: 1, added: 1, removed: 0, at: 0, isInProject: true }))
+  const report: FilesReport = { root: '/p', home: null, files, paths: {}, commits: [], pr: null }
+  const rows = reportRows(report)
+  expect(rows).toHaveLength(4)
+  expect(rows.every(runs => runs.at(-1)?.text === '  clean')).toBe(true)
+})
+
+test('clean drops what is not drawn and what makes a name read as another, and keeps the rest', async () => {
+  expect(clean('a\u001b[31mb\u009bc\u0007d')).toBe('a[31mbcd')
+  // Direction overrides and isolates, and the marks and spaces that are not seen or that break a line.
+  expect(clean('main\u202egpj\u2067x\u200b\u200e\u2028\ufeff')).toBe('maingpjx')
+  // Joiners belong to some scripts and to emoji sequences.
+  expect(clean('a\u200db\u200cc 👨\u200d👩\u200d👧 日本語 ñ')).toBe('a\u200db\u200cc 👨\u200d👩\u200d👧 日本語 ñ')
+})
+
+test('names the band is given, a folder or what takes the context, are drawn without control characters', async ($, on) => {
+  mock.clock(on)
+  linuxHost(on)
+  bandHost(on, '/work/a\u001b]0;pwned\u0007b\u202ec')
+  on('session.measure', ($, e) => ({ changed: e.changed }))
+  const categories = [
+    { name: 'Mess\u001b[31mages\u202e', tokens: 120_400, kind: 'used' },
+    { name: 'Free space', tokens: 150_000, kind: 'free' },
+  ]
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200_000, percent: 75, breakdown: { categories } }, rateLimits: [] } as never }))
+  await $.session.measure({ context: { window: 200_000, percent: 75 }, rateLimits: [], changed: ['context'] })
+  await $.turn.complete(ANSWERED)
+  const band = await $.ui.mount(HINT)
+  const texts = (await band.findAll({ type: 'Text' })).map(t => t.text)
+  expect(texts).toContain('a]0;pwnedbc')
+  expect(texts.some(t => /ctx .* 75% · Mess\[31mages 120k$/.test(t))).toBe(true)
+  expect(texts.join('')).not.toMatch(/[\u0000-\u001f\u007f-\u009f\u202e]/)
+  await band.unmount()
 })

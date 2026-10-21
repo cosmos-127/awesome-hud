@@ -153,6 +153,9 @@ export const pick = <T,>(list: readonly T[], seed: number): T => list[Math.abs(s
 
 export const fill = (template: string, target: string | undefined) => template.replace('{}', target ?? 'something')
 
+/** A tool's line from a theme's verbs, its own or the default: the model and MCP servers name tools, so `constructor` is no verb. */
+export const verbOf = (verbs: Readonly<Record<string, string>>, tool: string) => (Object.hasOwn(verbs, tool) ? verbs[tool]! : verbs.default!)
+
 // `claude-opus-5-5[1m]` reads `Opus 5.5`, `claude-3-5-sonnet-20241022` reads `Sonnet 3.5`.
 export const prettyModel = (raw: string) => {
   const id = raw.replace(/\[[^\]]*\]$/, '')
@@ -195,8 +198,9 @@ export const costOf = (m: Meter | null, mode: string) => {
 export const contextAlert = (pct: number) => (pct >= CONTEXT_CRIT ? 'error' : pct >= CONTEXT_WARN ? 'warning' : undefined)
 export const quotaAlert = (pct: number) => (pct >= QUOTA_CRIT ? 'error' : pct >= QUOTA_WARN ? 'warning' : undefined)
 
-// Tool names and targets come from the model and MCP servers: strip control characters.
-export const clean = (text: string) => text.replace(/[\u0000-\u001f\u007f-\u009f]/g, '')
+// Tool names and targets come from the model and MCP servers, branch names and paths from repositories: strip control
+// characters, and the marks that draw nothing or turn the text round, so a name cannot read as another (`main` and U+202E).
+export const clean = (text: string) => text.replace(/[\u0000-\u001f\u007f-\u009f\u061c\u200b\u200e\u200f\u2028-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/g, '')
 
 export const targetOf = (input: Record<string, unknown>) => {
   const raw = input.file_path ?? input.path ?? input.pattern ?? input.command ?? input.url
@@ -229,14 +233,16 @@ export const shortPath = (path: string, root: string, home: string | null) => {
 }
 
 // The test runners whose summaries summaryOf reads, and the task runners that run one (`make test`, `turbo run test`).
+// What lies between a task runner and its `test` is bounded: a line of runner names with no test word would otherwise
+// be read to its end from each of them.
 const TESTS = new RegExp(
   [
     String.raw`\b(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?test\b`,
     String.raw`\b(?:pytest|vitest|jest|mocha|rspec|phpunit|pest|unittest|tox|nox)\b`,
     String.raw`\b(?:go|cargo|dotnet|deno|mix|swift)\s+test\b`,
     String.raw`\bplaywright\s+test\b|\bmanage\.py\s+test\b|\bclaude\s+plugin\s+test\b`,
-    String.raw`\bmvnw?\b[^|;&\n]*\btest\b`,
-    String.raw`\b(?:make|just|turbo|nx)\b[^|;&\n]*\b(?:test|check)\b`,
+    String.raw`\bmvnw?\b[^|;&\n]{0,200}\btest\b`,
+    String.raw`\b(?:make|just|turbo|nx)\b[^|;&\n]{0,200}\b(?:test|check)\b`,
   ].join('|'),
 )
 
@@ -244,11 +250,17 @@ const TESTS = new RegExp(
 export const isTestCommand = (command: string) => TESTS.test(command)
 
 // `git [options] commit|push` run as a command, its quoted text dropped first: a message or an echo that names one runs none.
-const GIT_RUN = /(?:^|[;&|({\n])\s*(?:[A-Za-z_]\w*=\S*\s+)*git((?:\s+(?:-[cC]\s+\S+|--?[a-z][\w-]*(?:=\S+)?))*)\s+(commit|push)\b([^;&|\n]*)/g
+// A bare `-c` or `-C` has one reading, the option that takes the next word: as a flag of its own too, a run of them could
+// be split exponentially many ways before the match failed. Blanks and tabs, not `\s`, keep a match on its line. No word
+// holds an unquoted `;`, `&` or `|`, and none is long: `(` and `{` also start a command, so `a=b(a=b(a=b(...` would be
+// read to its end from each `(`.
+const GIT_RUN = /(?:^|[;&|({\n])[ \t]*(?:[A-Za-z_]\w{0,63}=[^\s;&|]{0,256}[ \t]+){0,16}git((?:[ \t]+(?:-[cC][ \t]+[^\s;&|]{1,256}|--?(?![cC](?:[ \t]|$))[a-z][\w-]{0,63}(?:=[^\s;&|]{1,256})?))*)[ \t]+(commit|push)\b([^;&|\n]*)/g
 
 /** The commit or push a shell line runs, read from its text alone: a push before a commit; a dry run is neither. */
 const gitPartyOf = (command: string): 'commit' | 'push' | undefined => {
-  const bare = command.replace(/'[^']*'|"(?:\\.|[^"\\])*"/g, "''")
+  // A quote that never closes runs to the end, as a shell reads it, and so does a backslash that ends the input: a quote
+  // with only escaped quotes after it would otherwise be read to the end from each of them.
+  const bare = command.replace(/'[^']*(?:'|$)|"(?:\\[\s\S]|[^"\\])*\\?(?:"|$)/g, "''")
   const verbs = [...bare.matchAll(GIT_RUN)]
     .filter(m => !/(?:^|\s)--dry-run\b/.test(m[3]!) && !(m[2] === 'push' && /(?:^|\s)-n\b/.test(m[3]!)))
     .map(m => m[2])
@@ -278,21 +290,23 @@ const sum = (found: RegExpMatchArray[], group: number) => found.reduce((n, m) =>
 const countIn = (list: string, name: string) => Number(new RegExp(String.raw`\b${name}=(\d+)`).exec(list)?.[1] ?? 0)
 const countOf = (line: string, name: string) => Number(new RegExp(String.raw`\b${name}: (\d+)`).exec(line)?.[1] ?? 0)
 
-// The summary each runner closes with, as passed and failed counts.
+// The summary each runner closes with, as passed and failed counts. A run's whole output is read, and a test or a file the
+// command printed may shape it: a pattern stays on its line (blanks and tabs, not `\s`, which would run on through the
+// empty lines after it) and never starts a number mid-way (`\b\d+`).
 const summaryOf = (out: string): Pick<TestRun, 'passed' | 'failed'> | undefined => {
   // jest and pest `Tests:  2 failed, 10 passed, 12 total`, vitest `Tests  2 failed | 40 passed (42)`, pytest `== 2 failed, 40 passed in 1.2s ==`.
-  const line = matches(out, /^\s*Tests:?\s.*\d+ (?:passed|failed).*$|^=*\s*\d+ \w+(?:, \d+ \w+)* in \d+(?:\.\d+)?s\b.*$/gm).at(-1)?.[0]
+  const line = matches(out, /^[ \t]*Tests:?[ \t].*\b\d+ (?:passed|failed).*$|^=*[ \t]*\d+ \w+(?:, \d+ \w+)* in \d+(?:\.\d+)?s\b.*$/gm).at(-1)?.[0]
   if (line) return { passed: sum(matches(line, /\b(\d+) passed\b/g), 1), failed: sum(matches(line, /\b(\d+) (?:failed|errors?)\b/g), 1) }
   // cargo: `test result: FAILED. 38 passed; 2 failed; ...`, a line per test binary.
   const cargo = matches(out, /^test result: \w+\. (\d+) passed; (\d+) failed/gm)
   if (cargo.length > 0) return { passed: sum(cargo, 1), failed: sum(cargo, 2) }
   // dotnet: `Failed!  - Failed:     2, Passed:    10, ...`, a line per test project, or the newer `Test summary: total: 12, failed: 2, succeeded: 10`.
-  const dotnet = matches(out, /^\s*(?:Passed|Failed)!\s+-\s+Failed:\s+(\d+),\s+Passed:\s+(\d+)/gm)
+  const dotnet = matches(out, /^[ \t]*(?:Passed|Failed)![ \t]+-[ \t]+Failed:[ \t]+(\d+),[ \t]+Passed:[ \t]+(\d+)/gm)
   if (dotnet.length > 0) return { passed: sum(dotnet, 2), failed: sum(dotnet, 1) }
-  const dotnetSummary = matches(out, /^\s*Test summary: total: \d+, failed: (\d+), succeeded: (\d+)/gm).at(-1)
+  const dotnetSummary = matches(out, /^[ \t]*Test summary: total: \d+, failed: (\d+), succeeded: (\d+)/gm).at(-1)
   if (dotnetSummary) return { passed: Number(dotnetSummary[2]), failed: Number(dotnetSummary[1]) }
   // maven: a module's total `[ERROR] Tests run: 12, Failures: 2, Errors: 1, Skipped: 1`; a class's line goes on past Skipped.
-  const maven = matches(out, /^\[(?:INFO|WARNING|ERROR)\]\s+Tests run: (\d+), Failures: (\d+), Errors: (\d+), Skipped: (\d+)\s*$/gm)
+  const maven = matches(out, /^\[(?:INFO|WARNING|ERROR)\][ \t]+Tests run: (\d+), Failures: (\d+), Errors: (\d+), Skipped: (\d+)[ \t]*$/gm)
   if (maven.length > 0) {
     const failed = sum(maven, 2) + sum(maven, 3)
     return { passed: sum(maven, 1) - failed - sum(maven, 4), failed }
@@ -319,7 +333,7 @@ const summaryOf = (out: string): Pick<TestRun, 'passed' | 'failed'> | undefined 
   if (deno) return { passed: Number(deno[1]), failed: Number(deno[2]) }
   // unittest, and Django's `manage.py test`: `Ran 12 tests in 0.1s` over `FAILED (failures=2, errors=1)` or `OK`.
   const ran = matches(out, /^Ran (\d+) tests? in \d/gm).at(-1)
-  const verdict = matches(out, /^(?:OK|FAILED)(?: \(([^)]*)\))?\s*$/gm).at(-1)
+  const verdict = matches(out, /^(?:OK|FAILED)(?: \(([^)]*)\))?[ \t]*$/gm).at(-1)
   if (ran && verdict) {
     const list = verdict[1] ?? ''
     const failed = countIn(list, 'failures') + countIn(list, 'errors')
@@ -331,8 +345,8 @@ const summaryOf = (out: string): Pick<TestRun, 'passed' | 'failed'> | undefined 
     return { passed: matches(out, /^--- PASS:/gm).length || matches(out, /^ok[ \t]+\S/gm).length, failed }
   }
   // bun and `claude plugin test`: ` 24 pass` over ` 0 fail`; playwright: `  3 passed (5.2s)` over `  1 failed`; mocha: `5 passing` over `2 failing`.
-  const passed = matches(out, /^\s*(\d+) pass(?:ed|ing)?\b/gm).at(-1)
-  const failed = matches(out, /^\s*(\d+) fail(?:ed|ing)?\b/gm).at(-1)
+  const passed = matches(out, /^[ \t]*(\d+) pass(?:ed|ing)?\b/gm).at(-1)
+  const failed = matches(out, /^[ \t]*(\d+) fail(?:ed|ing)?\b/gm).at(-1)
   return passed || failed ? { passed: Number(passed?.[1] ?? 0), failed: Number(failed?.[1] ?? 0) } : undefined
 }
 
@@ -344,9 +358,13 @@ export const testsOf = (command: string, output: string) => {
   return counts && counts.passed + counts.failed > 0 ? counts : undefined
 }
 
-/** A test command as runs of it are compared for a trend: without the redirect and the `| tail` or `| head` a long run is read through. */
+/**
+ * A test command as runs of it are compared for a trend: without the redirect and the `| tail` or `| head` a long run is
+ * read through. The white space before them is bounded, or a long run of it with neither after would be read again from
+ * each of its characters.
+ */
 export const commandKey = (command: string) =>
-  command.replace(/\s*2>&1/g, '').replace(/\s*\|\s*(?:tail|head)\b[^|;&]*/g, '').trim()
+  command.replace(/\s{0,16}2>&1/g, '').replace(/\s{0,16}\|\s{0,16}(?:tail|head)\b[^|;&]*/g, '').trim()
 
 /** `git status --porcelain=v2 --branch --show-stash -z`: the head, the upstream, the paths by kind, the stashes; each path's state when asked. */
 export type GitStatus = {
@@ -671,7 +689,12 @@ const STATE_WORD: Record<PathState | 'clean', [string, string | undefined]> = {
   clean: ['clean', undefined],
 }
 
-const stateOf = (r: FilesReport, f: FileEdit) => (r.paths && f.isInProject ? (r.paths[shortPath(f.path, r.root, null)] ?? 'clean') : undefined)
+// Git names the paths, and a file may be called `constructor`: only a path git listed has a state, as an own key.
+const stateOf = (r: FilesReport, f: FileEdit) => {
+  if (!r.paths || !f.isInProject) return undefined
+  const path = shortPath(f.path, r.root, null)
+  return Object.hasOwn(r.paths, path) ? r.paths[path]! : 'clean'
+}
 
 /** The `/awesome-hud files` line the model reads: what Claude edited in the project, how much git still has as changed, and the rest. */
 export const filesLine = (r: FilesReport, at: string) => {

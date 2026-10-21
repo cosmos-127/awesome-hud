@@ -6,7 +6,7 @@ import {
   COMPACT_AT, CONTEXT_CRIT, CONTEXT_WARN, FETCH_STALE_MS, branchSegments, clean, clockTime, commandKey, contextAlert, costOf, duration,
   editLines, effortMark, fileSegments, filesLine, fill, fit, gaugeRuns, gitOf, gitTrouble, headOf, isHot, isTestCommand, isUnder, limitLabel, parsePr, parseStatus,
   isMiss, partyOf, pick, planSegments, prOfOperation, prSegment, prettyModel, quotaAlert, recordEdit, reportRows, shortTool, shown, targetOf, testSegment,
-  testsOf, toMeter, treeSegments,
+  testsOf, toMeter, treeSegments, verbOf,
 } from './format'
 import type { GitOperation, GitStatus, Run, Segment } from './format'
 import { play } from './sound'
@@ -263,7 +263,8 @@ const fetchedAtOf = ($: EngineInterface, at: Repo) => $.fs.stat(`${at.commonDir}
 // With no upstream, ahead is what no remote has yet, where there is a remote to have it.
 async function unpushedOf($: EngineInterface, at: Repo, status: GitStatus, branch: string | null) {
   if (status.upstream !== 'none' || status.oid === null || branch === null) return 0
-  if (!/^\s*\[remote "/m.test(await $.fs.read(`${at.commonDir}/config`).catch(() => ''))) return 0
+  // Blanks and tabs, not `\s`: a config of empty lines would be read on from each of them.
+  if (!/^[ \t]*\[remote "/m.test(await $.fs.read(`${at.commonDir}/config`).catch(() => ''))) return 0
   const r = await $.process.run(['git', 'rev-list', '--count', 'HEAD', '--not', '--remotes'], { cwd: at.top, timeoutMs: 3_000 }).catch(() => undefined)
   return r?.exitCode === 0 ? Number(r.stdout.trim()) || 0 : 0
 }
@@ -415,7 +416,7 @@ async function refreshBreakdown($: EngineInterface, isFull: boolean) {
     else if (threshold !== undefined && context.window > 0) await update($, compaction, () => ({ at: Math.min(100, (threshold / context.window) * 100) }))
     if (!isFull) return
     const top = (b?.categories ?? []).filter(c => c.kind === 'used').sort((x, y) => y.tokens - x.tokens)[0]
-    await update($, eater, () => (top ? { name: top.name, tokens: top.tokens } : null))
+    await update($, eater, () => (top ? { name: clean(top.name), tokens: top.tokens } : null))
   } catch {
     if (isFull) await update($, eater, () => null)
   }
@@ -429,7 +430,7 @@ async function outputOf($: EngineInterface, result: ToolCallResult, bash: Builti
     const { size } = await $.fs.stat(path)
     if (size <= OUTPUT_READ_BYTES) return await $.fs.read(path)
     // shortcut: past that size only its end is read, with `tail`, which a Windows host lacks: it reads the preview instead.
-    const r = await $.process.run(['tail', '-c', String(OUTPUT_READ_BYTES), path], { timeoutMs: 5_000 })
+    const r = await $.process.run(['tail', '-c', String(OUTPUT_READ_BYTES), '--', path], { timeoutMs: 5_000 })
     return r.exitCode === 0 ? r.stdout : (result.text ?? '')
   } catch {
     return result.text ?? ''
@@ -575,7 +576,7 @@ async function band($: EngineInterface, ui: Elements['terminal'], site: Site) {
   const line =
     say ||
     (shownMood === 'working' && running
-      ? fill(theme.verbs[running.name] ?? theme.verbs.default!, running.target) + (ranFor >= 60_000 ? ` ${sym.dot} ${duration(ranFor)}` : '')
+      ? fill(verbOf(theme.verbs, running.name), running.target) + (ranFor >= 60_000 ? ` ${sym.dot} ${duration(ranFor)}` : '')
       : needs.join(` ${sym.dot} `) || pick(theme.quips[shownMood], minuteNow))
   // A need is drawn plain, to stand out from the dim jokes.
   const quipLine = (
@@ -604,7 +605,7 @@ async function band($: EngineInterface, ui: Elements['terminal'], site: Site) {
         { key: 'folder', sep: ' ', keep: 80, runs: [{ text: gitNow.worktree.project }] },
         { key: 'worktree', sep: ' ', keep: 40, runs: [{ text: `${sym.worktree} ${gitNow.worktree.name}`, dim: true }] },
       ]
-    : [{ key: 'folder', sep: ' ', keep: 80, runs: [{ text: cwd.split(/[\\/]/).pop() || cwd }] }]
+    : [{ key: 'folder', sep: ' ', keep: 80, runs: [{ text: clean(cwd.split(/[\\/]/).pop() || cwd) }] }]
   const cost = costOf(meterNow, costMode)
   const spent: Segment[] = [
     { key: 'time', sep: ` ${sym.dot} `, keep: 45, runs: [{ text: meterNow ? duration(now - meterNow.startedAt) : '0m', dim: true }] },
@@ -749,7 +750,7 @@ export const register: Register = (on, options) => {
       await update($, effort, () => level)
     }
     return result
-  })
+  }).catch(($, e, next) => next(e))
 
   on('session.measure', async ($, e, next) => {
     const prev = await read($, meter)
