@@ -2,19 +2,19 @@ import { BIG_Z, BLANK, DROP, SMALL_Z, SPARKLE, frame, layer, paint, shift, stamp
 import type { Patch } from '../sprite'
 import type { Theme } from '../theme'
 
-// A cream hamster with a tan cap: wide-set bead eyes, a pink nose, round ears, and cheeks that fill. Its wheel stands
-// in columns 14-17 below the emotes, and turns when it works.
+// A cream hamster with a tan cap: round ears, wide-set bead eyes, a pink nose over buck teeth, and cheeks that fill. Its
+// wheel stands in columns 14-17 below the emotes, and turns when it works.
 const FACE = [
   '..kk......kk..',
   '.kPPk....kPPk.',
   '.kPPkkkkkkPPk.',
-  '..kttttttttk..',
-  '.kcttttttttck.',
-  '.kcseccccseck.',
-  '.kceecccceeck.',
-  '.kppcwppwcppk.',
-  '..kcwwkkwwck..',
-  '...kkkkkkkk...',
+  '.kttttttttttk.',
+  'kttttttttttttk',
+  'kccseccccsecck',
+  'kcceecccceecck',
+  'kppcccppcccppk',
+  '.kccckwwkccck.',
+  '..kkkkkkkkkk..',
 ]
 
 // Both eyes at once: their top row, then their bottom row.
@@ -29,27 +29,23 @@ const WIDE: Patch[] = [...eyes('ss', 'se'), [6, 8, 'ee']]
 // Closed and smiling, ^ ^.
 const HAPPY: Patch[] = [[2, 5, 'cec'], [2, 6, 'ece'], [9, 5, 'cec'], [9, 6, 'ece']]
 const WORRIED: Patch[] = [[3, 4, 'kk'], [9, 4, 'kk']]
+// Chewing: the teeth gone.
 const NIBBLE: Patch[] = [[6, 8, 'ee']]
 
-// Cheeks full: the lower face a pixel wider each side.
-const STUFFED: Patch[] = [
-  [0, 5, 'kccseccccsecck'],
-  [0, 6, 'kcceecccceecck'],
-  [0, 7, 'kppccwppwccppk'],
-  [0, 8, '.kccwwkkwwcck.'],
-  [0, 9, '..kkkkkkkkkk..'],
-]
+// Cheeks full: the jaw a pixel wider each side.
+const STUFFED: Patch[] = [[0, 8, 'kcccckwwkcccck'], [0, 9, '.kkkkkkkkkkkk.']]
 
 // Shorter than the shared ones, so the wheel keeps the rows below.
 const QUESTION = ['.yy.', 'y..y', '..y.', '....', '..y.']
 const BANG = ['.rr.', '.rr.', '.rr.', '....', '.rr.']
 
-// The wheel, a ring on its side with a bright pip that goes round it.
+// The wheel, a ring on its side with two spokes that swap a step, and a bright pip that goes round it.
 const WHEEL = stamp(14, 5, ['.hh.', 'h..h', 'h..h', 'h..h', '.hh.'])
+const SPOKES = [stamp(14, 6, ['.j..', '.jj.', '..j.']), stamp(14, 6, ['..j.', '.jj.', '.j..'])]
 const RING = [[15, 5], [16, 5], [17, 6], [17, 7], [17, 8], [16, 9], [15, 9], [14, 8], [14, 7], [14, 6]] as const
 const wheel = (step: number): Patch[] => {
   const [x, y] = RING[step % RING.length]!
-  return [...WHEEL, [x, y, 'H']]
+  return [...WHEEL, ...SPOKES[step % 2]!, [x, y, 'H']]
 }
 
 // Seeds and sprinkles behind it, a row lower a step.
@@ -104,14 +100,15 @@ export const hamster: Theme = {
     k: 0xaa7744,
     t: 0xddaa77,
     c: 0xffddaa,
-    w: 0xffffee,
+    w: 0xffffff,
     p: 0xff77aa,
     P: 0xffaacc,
     e: 0x222222,
     s: 0xffffff,
-    h: 0x777777,
+    h: 0x77aadd,
+    j: 0xaaccee,
     H: 0xffdd44,
-    y: 0xffaa11,
+    y: 0xffdd44,
     r: 0xee4444,
     g: 0xaaaaaa,
     b: 0x77ccff,

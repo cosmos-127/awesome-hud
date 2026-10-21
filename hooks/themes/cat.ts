@@ -43,10 +43,10 @@ const WORRIED: Patch[] = [[4, 3, 'k'], [9, 3, 'k']]
 const FLAT_EARS: Patch[] = [[0, 0, '..............'], [0, 1, 'kkk........kkk'], [0, 2, 'kppokkkkkkoppk']]
 
 // The tail's poses, over the head's right edge where they meet it.
-const TAIL = stamp(13, 1, ['..kk.', '.kook', '.kdk.', '.kok.', '.kok.', '.kdk.', 'kok..', 'ok...', 'k....'])
-const TAIL_FLICK = stamp(13, 1, ['.kk..', 'kook.', '.kdk.', '.kok.', '.kok.', '.kdk.', 'kok..', 'ok...', 'k....'])
-const TAIL_UP = stamp(13, 0, ['..kk.', '.kook', '.kok.', '.kdk.', '.kok.', '.kok.', '.kdk.', 'kok..', 'ok...', 'k....'])
-const TAIL_LOW = stamp(13, 5, ['...k.', '..kok', '..kdk', '.kok.', 'kk...'])
+const TAIL = stamp(13, 1, ['..kk.', '.oook', '.ddk.', '.ook.', '.ddk.', '.ook.', 'ook..', 'ok...', 'k....'])
+const TAIL_FLICK = stamp(13, 1, ['.kk..', '.ook.', '.ddk.', '.ook.', '.ddk.', '.ook.', 'ook..', 'ok...', 'k....'])
+const TAIL_UP = stamp(13, 0, ['..kk.', '.oook', '.ook.', '.ddk.', '.ook.', '.ook.', '.ddk.', 'ook..', 'ok...', 'k....'])
+const TAIL_LOW = stamp(13, 5, ['..kk.', '.oook', '.ddk.', 'ook..', 'k....'])
 // Bristled like a bottle brush.
 const TAIL_PUFF = stamp(13, 5, ['.kkk.', 'kodok', 'kdodk', 'kodok', 'kok..'])
 const TAIL_CURLED = stamp(12, 7, ['.kkkkk', 'kodood', 'kkkkk.'])

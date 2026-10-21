@@ -2,43 +2,49 @@ import { BIG_Z, BLANK, DROP, SMALL_Z, SPARKLE, frame, layer, paint, shift, stamp
 import type { Patch } from '../sprite'
 import type { Theme } from '../theme'
 
-// A white bunny: tall ears lined in pink, a mauve outline that holds on dark and light terminals alike, oval eyes with a
-// glint, blushing cheeks. A carrot stands in columns 14-17 below the emotes.
+// A white bunny: tall ears lined in pink, a mauve outline that holds on dark and light terminals alike, tall eyes with a
+// pink glint, a pink nose, blushing cheeks. A carrot stands in columns 14-17 below the emotes.
 const FACE = [
   '...kk....kk...',
   '..kppk..kppk..',
   '..kppk..kppk..',
-  '..kppk..kppk..',
-  '..kppk..kppk..',
-  '..kkkkkkkkkk..',
-  '.kwlewwwwelwk.',
-  '.kwlewwwwelwk.',
-  '.kppwwPPwwppk.',
-  '..kkkkkkkkkk..',
+  '..kppkkkkppk..',
+  '.kwwwwwwwwwwk.',
+  'kwweewwwweewwk',
+  'kwwpewwwwpewwk',
+  'kwweewPPweewwk',
+  'kppwwwwwwwwppk',
+  '.kkkkkkkkkkkk.',
 ]
 
-// The ears are the five top rows, whole: a pose replaces them.
+// The ears are the four top rows, whole: a pose replaces them.
 const ears = (...rows: string[]): Patch[] => rows.map((row, y) => [0, y, row] as Patch)
 // One ear bent at its tip, the other standing.
-const TWITCH_LEFT = ears('..kk.....kk...', '.kppk...kppk..', '..kppk..kppk..', '..kppk..kppk..', '..kppk..kppk..')
-const TWITCH_RIGHT = ears('...kk.....kk..', '..kppk...kppk.', '..kppk..kppk..', '..kppk..kppk..', '..kppk..kppk..')
+const TWITCH_LEFT = ears('..kk.....kk...', '.kppk...kppk..', '..kppk..kppk..', '..kppkkkkppk..')
+const TWITCH_RIGHT = ears('...kk.....kk..', '..kppk...kppk.', '..kppk..kppk..', '..kppkkkkppk..')
 // Both tips thrown outward: a thump.
-const SPLAY = ears('..kk......kk..', '.kppk....kppk.', '..kppk..kppk..', '..kppk..kppk..', '..kppk..kppk..')
+const SPLAY = ears('..kk......kk..', '.kppk....kppk.', '..kppk..kppk..', '..kppkkkkppk..')
 // Folded over and low, as a lop's are.
-const LOP = ears('..............', '..kkk....kkk..', '.kpppk..kpppk.', '.kpppk..kpppk.', '..kppk..kppk..')
+const LOP = ears('..............', '..kkk....kkk..', '.kpppk..kpppk.', '.kpppkkkkpppk.')
 
-// An eye is two pixels wide and two tall, a glint beside the dark: the left eye's at x 3, the right's at x 9.
-const LOOK_LEFT: Patch[] = [[3, 6, 'el'], [3, 7, 'el'], [9, 6, 'el'], [9, 7, 'el']]
-const LOOK_RIGHT: Patch[] = [[3, 6, 'le'], [3, 7, 'le'], [9, 6, 'le'], [9, 7, 'le']]
-const BLINK: Patch[] = [[3, 6, 'ww'], [3, 7, 'ee'], [9, 6, 'ww'], [9, 7, 'ee']]
-// Eyes gone pale and round, with pinpoint pupils.
-const WIDE: Patch[] = [[3, 6, 'll'], [3, 7, 'le'], [9, 6, 'll'], [9, 7, 'el']]
+// Both eyes at once, two pixels wide and dx columns along: their rows from y 5, over the open eyes wiped.
+const eyes = (dx: number, ...rows: string[]): Patch[] => [
+  ...rows.flatMap((_, i) => [[3, 5 + i, 'ww'], [9, 5 + i, 'ww']] as Patch[]),
+  ...rows.flatMap((r, i) => [[3 + dx, 5 + i, r], [9 + dx, 5 + i, r]] as Patch[]),
+]
+
+const BLINK = eyes(0, 'ww', 'ww', 'ee')
+// A bead eye looks by sliding along the face, its pink glint with it.
+const LOOK_LEFT = eyes(-1, 'ee', 'pe', 'ee')
+const LOOK_RIGHT = eyes(1, 'ee', 'pe', 'ee')
+// Eyes gone big, three pixels wide, the mouth a small O.
+const WIDE: Patch[] = [[2, 5, 'eee'], [2, 6, 'epe'], [2, 7, 'eee'], [9, 5, 'eee'], [9, 6, 'epe'], [9, 7, 'eee'], [6, 8, 'ee']]
 // Closed and smiling, ^ ^.
-const HAPPY: Patch[] = [[3, 6, 'ww'], [3, 7, 'ww'], [9, 6, 'ww'], [9, 7, 'ww'], [3, 7, 'e'], [4, 6, 'e'], [5, 7, 'e'], [8, 7, 'e'], [9, 6, 'e'], [10, 7, 'e']]
+const HAPPY: Patch[] = [...eyes(0, 'ww', 'ww', 'ww'), [3, 6, 'e'], [2, 7, 'e'], [4, 7, 'e'], [10, 6, 'e'], [9, 7, 'e'], [11, 7, 'e']]
 // Lids half down.
-const TIRED: Patch[] = [[3, 6, 'ww'], [3, 7, 'le'], [9, 6, 'ww'], [9, 7, 'el']]
+const TIRED = eyes(0, 'ww', 'pe', 'ee')
 // The nose, twitching to a single pixel.
-const SNIFF: Patch[] = [[6, 8, 'wP']]
+const SNIFF: Patch[] = [[6, 7, 'wP']]
 
 // Shorter than the shared ones, so the carrot keeps the rows below.
 const QUESTION = ['.yy.', 'y..y', '..y.', '....', '..y.']

@@ -2,39 +2,41 @@ import { BIG_Z, DROP, SMALL_Z, SPARKLE, frame, paint, shift, stamp } from '../sp
 import type { Patch } from '../sprite'
 import type { Theme } from '../theme'
 
-// A pink axolotl: dot eyes, a wide smile, blushing cheeks, and frilled gills fanned off each side. Seaweed sways in
+// A pink axolotl: big dark eyes, blushing cheeks, a wide smile, and frilled gills fanned off each side. Seaweed sways in
 // columns 14-17 below the emotes.
 const FACE = [
   'rr..........rr',
   'GGr........rGG',
   'rGGkkkkkkkkGGr',
-  '.GGkalsslakGG.',
-  'rGGaeaaaaeaGGr',
-  '.GkGaaaaaaGkG.',
-  '..kakaaaakak..',
-  '...kakkkkak...',
-  '...kaaaaaak...',
-  '....kkkkkk....',
+  '.GGkaaaaaakGG.',
+  'rGkseaaaasekGr',
+  '.GkeeaaaaeekG.',
+  '..kPakaakaPk..',
+  '..kaaakkaaak..',
+  '..kaaaaaaaak..',
+  '...kkkkkkkk...',
 ]
 
-// Both eyes a pixel along: dots at x 4 and 9, y 4.
-const look = (dx: number): Patch[] => [[4, 4, 'a'], [9, 4, 'a'], [4 + dx, 4, 'e'], [9 + dx, 4, 'e']]
-const LOOK_LEFT = look(-1)
-const LOOK_RIGHT = look(1)
-// Eyes shut: a dash below where each dot was.
-const BLINK: Patch[] = [[4, 4, 'a'], [9, 4, 'a'], [4, 5, 'k'], [9, 5, 'k']]
-// Closed and content, each eye a small cup.
-const HAPPY: Patch[] = [[4, 4, 'a'], [9, 4, 'a'], [3, 4, 'k'], [5, 4, 'k'], [4, 5, 'k'], [8, 4, 'k'], [10, 4, 'k'], [9, 5, 'k']]
-// Eyes gone big and white, the mouth a round O.
-const WIDE: Patch[] = [[4, 3, 'ss'], [4, 4, 'es'], [8, 3, 'ss'], [8, 4, 'se'], [4, 6, 'a'], [9, 6, 'a'], [5, 7, 'a'], [8, 7, 'a'], [6, 6, 'kk'], [6, 7, 'kk']]
+// Both eyes at once: their top row, then their bottom row.
+const eyes = (top: string, bottom: string): Patch[] => [[3, 4, top], [9, 4, top], [3, 5, bottom], [9, 5, bottom]]
+
+const BLINK = eyes('aa', 'kk')
+// A bead eye looks by where its glint sits.
+const LOOK_LEFT = eyes('se', 'ee')
+const LOOK_RIGHT = eyes('es', 'ee')
+// Eyes gone round and white, the mouth a round O.
+const WIDE: Patch[] = [...eyes('ss', 'se'), [5, 6, 'a'], [8, 6, 'a'], [6, 6, 'kk'], [6, 7, 'kk']]
+// Closed and smiling, ^ ^, each a pixel wider than the eye.
+const HAPPY: Patch[] = [...eyes('aa', 'aa'), [4, 4, 'k'], [3, 5, 'k'], [5, 5, 'k'], [9, 4, 'k'], [8, 5, 'k'], [10, 5, 'k']]
 const WORRIED: Patch[] = [[4, 3, 'k'], [9, 3, 'k']]
 // The smile gone to a wobble.
-const WOBBLE: Patch[] = [[4, 6, 'a'], [9, 6, 'a'], [5, 7, 'a'], [8, 7, 'a'], [5, 6, 'kk'], [7, 7, 'kk']]
+const WOBBLE: Patch[] = [[5, 6, 'akak'], [6, 7, 'aa']]
 
-// The gills at rest stand up; down, the top row has dropped a row.
-const GILLS_DOWN: Patch[] = [[0, 0, '..'], [0, 1, 'rrG'], [0, 5, 'r'], [12, 0, '..'], [11, 1, 'Grr'], [13, 5, 'r']]
-// Flared wide, with a stalk more.
-const GILLS_FLARE: Patch[] = [[0, 3, 'r'], [0, 5, 'r'], [1, 5, 'G'], [1, 6, 'r'], [13, 3, 'r'], [13, 5, 'r'], [12, 5, 'G'], [12, 6, 'r']]
+// The gills at rest stand up; down, the top fronds have dropped a row.
+const GILLS_DOWN: Patch[] = [[0, 0, '..'], [0, 1, 'rrG'], [0, 4, '.'], [0, 5, 'r'], [12, 0, '..'], [11, 1, 'Grr'], [13, 4, '.'], [13, 5, 'r']]
+// A gill lost: the left top frond gone, then a stub of it, then grown back.
+const GILL_GONE: Patch[] = [[0, 0, '...'], [0, 1, '...'], [0, 2, '...'], [0, 3, '...']]
+const GILL_STUB: Patch[] = [...GILL_GONE, [1, 3, 'rG']]
 
 // Shorter than the shared ones, so the seaweed keeps the rows below.
 const QUESTION = ['.yy.', 'y..y', '..y.', '....', '..y.']
@@ -63,9 +65,11 @@ const moods: Theme['moods'] = {
     frame(face(t % 4 < 2 ? LOOK_RIGHT : LOOK_LEFT, t % 2 ? GILLS_DOWN : [], weed(t), t % 4 < 3 ? stamp(14, 2 - (t % 4), BUBBLE) : []), 140),
   ),
   waiting: [frame(face(LOOK_RIGHT, weed(0), stamp(14, 0, QUESTION)), 650), frame(face(LOOK_RIGHT, weed(2)), 300)],
+  // Lost a gill, and growing it back: the stub, then the whole.
   error: [
-    frame(face(WIDE, GILLS_FLARE, weed(0), stamp(14, 0, BANG)), 420),
-    frame(face(WIDE, GILLS_FLARE, weed(2)), 160),
+    frame(face(WIDE, GILL_GONE, weed(0), stamp(14, 0, BANG)), 420),
+    frame(face(WIDE, GILL_STUB, weed(2)), 300),
+    frame(face(WIDE, weed(0)), 300),
   ],
   done: [frame(face(HAPPY, weed(0), stamp(14, 0, SPARKLE)), 500), frame(face(HAPPY, GILLS_DOWN, weed(2), stamp(15, 2, SPARKLE)), 500)],
   // Bubble party: a bounce, the gills in a flutter, hearts floating up.
@@ -91,8 +95,8 @@ export const axolotl: Theme = {
   palette: {
     k: 0xcc4477,
     a: 0xffaacc,
-    l: 0xffddee,
     G: 0xff77aa,
+    P: 0xff77aa,
     e: 0x222222,
     s: 0xffffff,
     v: 0x44dd44,

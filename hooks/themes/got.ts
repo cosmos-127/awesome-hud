@@ -2,35 +2,42 @@ import { BANG, BLANK, HEIGHT, QUESTION, SMALL_Z, WIDTH, frame, layer, paint, shi
 import type { Patch } from '../sprite'
 import type { Theme } from '../theme'
 
-// A direwolf of the North: wide rimmed ears, a dark mask about amber eyes, a pale blaze down to a white snout, ruff at
-// the cheeks. Snow falls behind it.
+// A direwolf pup of the North: tall ears pink inside, a pale blaze down to a white muzzle and a black nose, big amber
+// eyes, ruff at the cheeks. Snow falls behind it.
 const FACE = [
-  '.g..........g.',
-  'gdg........gdg',
-  'gddg......gddg',
-  'gddgggGGgggddg',
-  'kgggdgGGgdgggk',
-  'kgaedgGGgdeagk',
-  'gkgggGwwGgggkg',
-  '.gkggwwwwggkg.',
-  '..kgwwnnwwgk..',
-  '...kkwwwwkk...',
+  '.k..........k.',
+  'kgk........kgk',
+  'kgpk......kpgk',
+  'kgppkkGGkkppgk',
+  'kgaagGGGGgaagk',
+  'kgseggGGggsegk',
+  'kgaaggGGggaagk',
+  '.kgggwwwwgggk.',
+  'kgkgwwnnwwgkgk',
+  '.k.kkwwwwkk.k.',
 ]
 
-// Both eyes at once: one row, two pixels each.
-const eyes = (left: string, right: string): Patch[] => [[2, 5, left], [10, 5, right]]
+// Both eyes at once, two pixels wide: their rows from y 4, amber around a glint and a pupil.
+const eyes = (...rows: string[]): Patch[] => rows.flatMap((r, i) => [[2, 4 + i, r], [10, 4 + i, r]] as Patch[])
 
-const BLINK = eyes('dd', 'dd')
-const LOOK_LEFT = eyes('ea', 'ea')
-const LOOK_RIGHT = eyes('ae', 'ae')
-const WIDE = eyes('we', 'ew')
+const BLINK = eyes('gg', 'gg', 'dd')
+// A pupil looks by which side of the glint it sits.
+const LOOK_LEFT = eyes('aa', 'es', 'aa')
+const LOOK_UP = eyes('se', 'aa', 'aa')
+// Eyes gone round and white, the pupils pinpricks.
+const WIDE = eyes('ww', 'we', 'ww')
+// Closed and smiling, ^ ^, each a pixel wider than the eye.
+const HAPPY: Patch[] = [...eyes('gg', 'gg', 'gg'), [1, 5, 'gdg'], [1, 6, 'dgd'], [10, 5, 'gdg'], [10, 6, 'dgd']]
+// One ear flicked, tip out.
+const FLICK_LEFT: Patch[] = [[0, 0, 'k.'], [0, 1, 'kk']]
+const FLICK_RIGHT: Patch[] = [[12, 0, '.k'], [12, 1, 'kk']]
 // Ears pinned back: the '.' erase their tips.
-const EARS_BACK: Patch[] = [[0, 0, '..............'], [0, 1, 'g............g'], [0, 2, 'gdg........gdg']]
+const EARS_BACK: Patch[] = [[0, 0, '..............'], [0, 1, '..............']]
 const SNARL: Patch[] = [[5, 9, 'wkkw']]
-const TONGUE: Patch[] = [[6, 9, 'pp']]
+const TONGUE: Patch[] = [[6, 8, 'nn'], [6, 9, 'pp']]
 const PANT: Patch[] = [[5, 9, 'kppk']]
 // Snow piled on the head and on the ears' tips.
-const SNOWCAP: Patch[] = [[4, 3, 'wwwwww'], [1, 0, 'w'], [12, 0, 'w'], [0, 1, 'w'], [13, 1, 'w']]
+const SNOWCAP: Patch[] = [[4, 3, 'wwwwww'], [1, 0, 'w'], [12, 0, 'w']]
 // The King in the North.
 const CROWN = stamp(4, 1, ['y.yy.y', 'yyyyyy'])
 // A raven's three wing beats.
@@ -57,19 +64,24 @@ const face = (...groups: (readonly Patch[])[]) => paint(FACE, ...groups)
 const scene = (t: number, ...groups: (readonly Patch[])[]) => layer(snow(t), face(...groups))
 
 const moods: Theme['moods'] = {
-  idle: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(t => (t === 3 || t === 9 ? frame(scene(t, BLINK), 160) : frame(scene(t), 900))),
-  working: [...[0, 1, 2, 3].map(t => frame(scene(t, t % 2 ? LOOK_RIGHT : LOOK_LEFT), 520)), frame(scene(4, BLINK), 140)],
+  idle: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(t => {
+    if (t === 3 || t === 9) return frame(scene(t, BLINK), 160)
+    // An ear flicks at a stray flake.
+    if (t === 5) return frame(scene(t, FLICK_LEFT), 300)
+    return frame(scene(t), 900)
+  }),
+  working: [...[0, 1, 2, 3].map(t => frame(scene(t, t % 2 ? [] : LOOK_LEFT), 520)), frame(scene(4, BLINK), 140)],
   // The raven awaits your answer.
   waiting: [
-    ...[0, 1, 2, 3].map(i => frame(paint(scene(0, LOOK_RIGHT), stamp(13, 1 + (i % 2), RAVEN[i % 3]!)), 260)),
-    frame(paint(scene(1, LOOK_RIGHT), stamp(14, 0, QUESTION)), 650),
+    ...[0, 1, 2, 3].map(i => frame(paint(scene(0, FLICK_RIGHT), stamp(13, 1 + (i % 2), RAVEN[i % 3]!)), 260)),
+    frame(paint(scene(1, LOOK_UP), stamp(14, 0, QUESTION)), 650),
   ],
   error: [frame(paint(scene(0, WIDE, SNARL, EARS_BACK), stamp(14, 1, BANG)), 420), frame(scene(1, WIDE, SNARL, EARS_BACK), 160)],
-  done: [frame(paint(scene(0, BLINK, TONGUE), stamp(15, 0, SPARKLE)), 500), frame(paint(scene(1, BLINK, TONGUE), stamp(14, 5, SPARKLE)), 500)],
+  done: [frame(paint(scene(0, HAPPY, TONGUE), stamp(15, 0, SPARKLE)), 500), frame(paint(scene(1, HAPPY, TONGUE), stamp(14, 5, SPARKLE)), 500)],
   // Crowned, panting, with dragonfire beside: a bounce a frame.
-  party: [0, 1, 2, 3].map(t => frame(paint(shift(face(BLINK, PANT, CROWN), 0, t % 2), stamp(14, 2, FLAME[t % 2]!)), 140)),
+  party: [0, 1, 2, 3].map(t => frame(paint(shift(face(HAPPY, PANT, CROWN), 0, t % 2), stamp(14, 2, FLAME[t % 2]!)), 140)),
   // Winter is here: heavy snow, and a shiver.
-  sweat: [0, 1, 2, 3, 4, 5].map(t => frame(layer(snow(t, true), shift(face(t % 2 ? LOOK_LEFT : LOOK_RIGHT, EARS_BACK), t % 2, 0)), 180)),
+  sweat: [0, 1, 2, 3, 4, 5].map(t => frame(layer(snow(t, true), shift(face(t % 2 ? LOOK_LEFT : [], EARS_BACK), t % 2, 0)), 180)),
   asleep: [0, 1, 2].map(t => frame(paint(scene(t, BLINK, SNOWCAP), t < 2 ? stamp(15, 4 - 2 * t, SMALL_Z) : []), 1100)),
 }
 
@@ -79,17 +91,18 @@ export const got: Theme = {
   accent: '#aaccee',
   onAccent: '#111111',
   palette: {
-    k: 0x333333,
+    k: 0x7777aa,
     g: 0xaaaaaa,
     G: 0xcccccc,
-    d: 0x666666,
-    w: 0xeeeeee,
-    n: 0x111111,
-    a: 0xeeaa33,
-    e: 0x111111,
+    d: 0x444477,
+    w: 0xffffff,
+    n: 0x222222,
+    a: 0xffaa44,
+    e: 0x222222,
+    s: 0xffffff,
     p: 0xff77aa,
-    f: 0x77aacc,
-    K: 0x777777,
+    f: 0x77aaff,
+    K: 0x888888,
     y: 0xffdd44,
     Y: 0xffeeaa,
     r: 0xee4411,

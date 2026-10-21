@@ -2,36 +2,36 @@ import { SMALL_Z, frame, paint, shift, stamp } from '../sprite'
 import type { Patch } from '../sprite'
 import type { Theme } from '../theme'
 
-// Big violet eyes under swept bangs, an ahoge, and a side ponytail tied low on the right.
+// Big violet eyes under swept bangs, a hairclip, an ahoge, and a side ponytail tied low on the right.
 const FACE = [
   '........h.....',
   '...kkhhhhkk...',
-  '.khhHHhhhhhhk.',
-  'khhhhhhhhhhhhk',
+  '.khyHHhhhhhhk.',
+  'khhYyhhhhhhhhk',
   'khshhssssshhhk',
   'khseesssseeshk',
   'khswessssweshk',
-  'khsiissssiishk',
-  'khppssMMsspphk',
-  '.khSssssssShk.',
+  'khsiHssssiHshk',
+  'khnnsMssMsnnhk',
+  '.khSssMMssShk.',
 ]
 
 // Both eyes at once, each two pixels wide: their rows from y 5.
 const eyes = (...rows: string[]): Patch[] => rows.flatMap((r, i) => [[3, 5 + i, r], [9, 5 + i, r]] as Patch[])
 
 const BLINK = eyes('ss', 'ss', 'ee')
-const LOOK_LEFT = eyes('ee', 'ew', 'ii')
-const LOOK_RIGHT = eyes('ee', 'we', 'ii')
+const LOOK_LEFT = eyes('ee', 'ew', 'Hi')
+const LOOK_RIGHT = eyes('ee', 'we', 'iH')
 const SLEEPY = eyes('ss', 'ee', 'ss')
 // Closed and smiling, ^ ^, each a pixel wider than the eye.
 const HAPPY: Patch[] = [...eyes('ss', 'ss', 'ss'), [2, 5, 'ses'], [2, 6, 'ese'], [9, 5, 'ses'], [9, 6, 'ese']]
-// A cat-mouth smile: the corners up, the middle kept.
-const SMILE: Patch[] = [[5, 8, 'M  M'], [6, 9, 'MM']]
+// An open grin, the tongue showing.
+const GRIN: Patch[] = [[5, 8, 'MMMM'], [6, 9, 'nn']]
 // Eyes gone white with pinpoint pupils, mouth open.
-const SHOCK: Patch[] = [...eyes('ww', 'we', 'ww'), [6, 8, 'MM'], [6, 9, 'MM']]
+const SHOCK: Patch[] = [...eyes('ww', 'we', 'ww'), [5, 8, 'sMMs'], [6, 9, 'MM']]
 // Gloom lines down the bangs.
-const GLOOM: Patch[] = [[4, 2, 'b b b'], [4, 3, 'b b b']]
-const WOBBLE: Patch[] = [[5, 8, 'MssM']]
+const GLOOM: Patch[] = [[5, 2, 'b b b'], [5, 3, 'b b b']]
+const WOBBLE: Patch[] = [[5, 8, 'sMsM'], [6, 9, 'ss']]
 const AHOGE_SWAY: Patch[] = [[7, 0, 'h.']]
 
 // The ponytail, tied low behind the right side lock so the corner above it stays free for emotes.
@@ -81,10 +81,10 @@ const moods: Theme['moods'] = {
   waiting: [frame(face(LOOK_RIGHT, TAIL, stamp(15, 0, QUESTION)), 650), frame(face(LOOK_RIGHT, TAIL), 300)],
   // The vein throbs: whole, then its middle rows alone.
   error: [frame(face(SHOCK, GLOOM, TAIL, stamp(13, 0, VEIN)), 420), frame(face(SHOCK, GLOOM, TAIL, stamp(13, 1, VEIN.slice(1, 4))), 160)],
-  done: [frame(face(HAPPY, SMILE, TAIL, stamp(14, 0, SPARKLE)), 500), frame(face(HAPPY, SMILE, TAIL_SWAY, stamp(15, 1, SPARKLE)), 500)],
+  done: [frame(face(HAPPY, GRIN, TAIL, stamp(14, 0, SPARKLE)), 500), frame(face(HAPPY, GRIN, TAIL_SWAY, stamp(15, 1, SPARKLE)), 500)],
   // Powering up: a bounce, and a golden aura pulsing about the whole silhouette.
   party: [0, 1, 2, 3].map(t =>
-    frame(aura(shift(face(HAPPY, SMILE, t % 2 ? TAIL : TAIL_SWAY, t % 2 ? AHOGE_SWAY : []), 0, t % 2), t % 2 ? 'y' : 'Y'), 140),
+    frame(aura(shift(face(HAPPY, GRIN, t % 2 ? TAIL : TAIL_SWAY, t % 2 ? AHOGE_SWAY : []), 0, t % 2), t % 2 ? 'y' : 'Y'), 140),
   ),
   sweat: [
     frame(face(WOBBLE, TAIL, stamp(10, 0, DROP)), 700),

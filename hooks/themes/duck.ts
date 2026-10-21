@@ -2,20 +2,23 @@ import { BIG_Z, BLANK, DROP, SMALL_Z, SPARKLE, WIDTH, frame, layer, paint, shift
 import type { Patch } from '../sprite'
 import type { Theme } from '../theme'
 
-// A rubber duck in the bath: a round yellow head, a tuft, a flat orange beak, and two rows of water that never keep
-// still. Bubbles rise in columns 14-17.
+// A rubber duck in the bath: a round yellow head, a tuft, a wide orange beak between rosy cheeks, and two rows of water
+// that never keep still. Bubbles rise in columns 14-17.
 const FACE = [
   '.....kyyk.....',
   '...kkYYYYkk...',
   '..kYssYYYYYk..',
   '.kYseYYYYseYk.',
   '.kYeeYYYYeeYk.',
-  '.kppYooooYppk.',
-  '..kYYYOOYYYk..',
+  '.kppooooooppk.',
+  '..kYYoOOoYYk..',
   '...kkkkkkkk...',
   '',
   '',
 ]
+
+// Squeezed: the crown's shine row gone, the head a row flatter.
+const SQUASHED = ['', ...FACE.slice(0, 2), ...FACE.slice(3)]
 
 // Both eyes at once: their top row, then their bottom row.
 const eyes = (top: string, bottom: string): Patch[] => [[3, 3, top], [9, 3, top], [3, 4, bottom], [9, 4, bottom]]
@@ -66,6 +69,7 @@ const flood = (level: number): Patch[] => [
 ]
 
 const bird = (...groups: (readonly Patch[])[]) => paint(FACE, ...groups)
+const squashed = (...groups: (readonly Patch[])[]) => paint(SQUASHED, ...groups)
 // The bird in the bath at step t: water, then bubbles, then the duck over them.
 const pond = (t: number, hasBubbles = true) => layer(water(t), hasBubbles ? bubbles(t) : BLANK)
 const scene = (t: number, front: readonly string[], hasBubbles = true) => layer(pond(t, hasBubbles), front)
@@ -83,8 +87,9 @@ const moods: Theme['moods'] = {
     frame(paint(scene(0, shift(bird(LOOK_RIGHT), 1, 0), false), stamp(14, 0, QUESTION)), 650),
     frame(scene(1, shift(bird(LOOK_RIGHT), 1, 0), false), 300),
   ],
+  // A squeak: squeezed flat, the beak open, the water flung up.
   error: [
-    frame(paint(scene(0, bird(WIDE, SPLASH), false), stamp(14, 0, BANG)), 420),
+    frame(paint(scene(0, squashed(WIDE, SPLASH), false), stamp(14, 0, BANG)), 420),
     frame(scene(2, bird(WIDE, SPLASH_LOW), false), 160),
   ],
   done: [
