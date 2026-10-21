@@ -1,6 +1,6 @@
 # Contributing
 
-Bug reports, theme ideas, and fixes are welcome. For a security problem, see [SECURITY.md](SECURITY.md) rather than opening an issue.
+Bug reports, theme ideas, and fixes are welcome. For a security problem, read [SECURITY.md](SECURITY.md) first.
 
 ## Set up
 

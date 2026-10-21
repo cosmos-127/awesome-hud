@@ -1,5 +1,0 @@
-blank_issues_enabled: true
-contact_links:
-  - name: Report a security vulnerability
-    url: https://github.com/cosmos-127/awesome-hud/security/advisories/new
-    about: Please report security problems privately, not in a public issue.

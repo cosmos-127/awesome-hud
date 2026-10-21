@@ -2,7 +2,10 @@
 
 ## Reporting a vulnerability
 
-Report a vulnerability privately through GitHub: open this repository's **Security** tab and choose **Report a vulnerability**. Please do not open a public issue for it.
+This repository has no private reporting channel, so how to report depends on what you found:
+
+- A freeze or crash, or text that misleads: open an ordinary [issue](https://github.com/cosmos-127/awesome-hud/issues/new/choose).
+- Anything that could run code, touch files the mod is not documented to, or leak something from a session: open an issue that says only that you have a security report, with no details, and ask for a private way to send it.
 
 What counts: a way to make the mod run code or touch files it is not documented to, to freeze or crash Claude Code with text that a repository, a command, or a test run can produce, to make the HUD draw text that misleads or terminal control sequences, or to leak anything from a session.
 
