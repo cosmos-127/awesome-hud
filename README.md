@@ -1,6 +1,6 @@
 # awesome-hud
 
-A pop-culture HUD for Claude Code. An animated pixel mascot lives under your prompt and reacts to what Claude is doing, with a sound for the moments that matter and a compact status bar beside it: model, context, plan limits, and the state of your repository.
+A pop-culture HUD for Claude Code. An animated pixel mascot lives under your prompt and reacts to what Claude is doing, with a compact status bar beside it: model, context, plan limits, and the state of your repository. Each theme also has sounds for the moments that matter, off until you turn them on.
 
 ![awesome-hud under the prompt](assets/preview.gif)
 
@@ -18,7 +18,7 @@ The band draws in terminal sessions; the desktop app shows no band. Built and te
 
 ## Themes
 
-| Theme | Mascot | Sounds |
+| Theme | Mascot | Sounds, once turned on |
 | --- | --- | --- |
 | `cat` (default) | an orange tabby with opinions, and a tail that says what it thinks | a mrrp, a hiss, a questioning meow, an 8-bit arpeggio |
 | `chibi` | big violet eyes, a side ponytail, anime feelings | a sparkle, a boing, a ding-dong, a magical fanfare |
@@ -31,7 +31,7 @@ Each theme has its own lines for every mood and its own spinner words, and its m
 Beside the mascot, top to bottom:
 
 1. The model and effort, the folder, session time and cost.
-2. Context used, and about how many turns are left before auto-compact.
+2. Context used, with a mark where auto-compact starts.
 3. The 5-hour plan window with its reset time, and the week beside it. Bars turn yellow and then red as they fill.
 4. The repository and what changed in it (below).
 5. What the mascot has to say: the file or command it is watching, or a line for its mood. At rest it says what needs you instead: failing tests, a rebase stopped on conflicts, a failed agent.
@@ -69,7 +69,16 @@ A row with too much for the room drops its least telling parts first. In a termi
 | party | Tests all pass, a commit or push lands, or you type `pspsps` |
 | sweat | Context 85% full, or a plan limit 90% used |
 
-A sound plays on a party, on an error, when Claude needs you, and when it answers a turn that took 30 seconds or more. macOS plays them through Claude Code; Linux needs `pw-play`, `paplay` or `aplay`. Turn them off with **Sounds**.
+Sounds are off until you turn **Sounds** on in `/config`. Then a sound plays on a party, on an error, when Claude needs you, and when it answers a turn that took 30 seconds or more. macOS plays them through Claude Code and Windows through PowerShell; Linux needs `pw-play`, `paplay` or `aplay`.
+
+## Terminals
+
+The band is built to look the same in any terminal Claude Code runs in.
+
+- **Color.** The mascot is painted in 24-bit color. A terminal without it (an older Apple Terminal, tmux without passthrough, a bare `TERM=xterm-256color` over SSH) rounds each color to its 256-color palette, and every color of every theme lands on the same close entry by either of the two usual ways of rounding: no outline turns olive, no violet turns gray. `claude plugin test .` holds a new theme to it.
+- **Marks.** Where the terminal's font may lack the band's marks (`⎇ ✎ ✓ ✗ ↻`), as in a bare Windows PowerShell window or the Linux console, the band draws ASCII instead: `git main ^2 v1`, `edited 4 files`, `ok 24 passed`. It decides as Claude Code does for its own symbols, and **Symbols** overrides it.
+- **Windows.** With **Sounds** on, they play through PowerShell. That path has not run on a Windows machine yet (the script parses in PowerShell 7, and opens the file whatever its name); if you hear nothing, say so in an issue.
+- If the mascot still looks wrong in your terminal, **Layout** `compact` draws the stats alone, and an issue naming the terminal helps.
 
 ## Commands
 
@@ -86,7 +95,8 @@ Run `/config` and look for the awesome-hud rows.
 | Theme | `cat` | `cat`, `chibi` or `got`. |
 | Position | `below` | The band under the prompt, or `above` it. |
 | Layout | `full` | The mascot beside five rows of stats, or `compact`: two lines, no mascot. |
-| Sounds | on | Theme sounds for the moments above. |
+| Symbols | `auto` | The band's marks where the terminal's font has them and ASCII where it may not; `unicode` or `ascii` decides for you. |
+| Sounds | off | Theme sounds for the moments above, once you turn this on. |
 | Session cost | `auto` | Shown when you pay per token, hidden on Pro or Max, where it is only an estimate. |
 | Themed words | on | Theme words in Claude Code's spinner and turn-closing line, and a toast when tests pass or a commit or push lands. |
 | PR status | off | Asks GitHub (`gh pr view`) for the pull request's checks and review. The only part that uses the network. |
@@ -96,7 +106,7 @@ Run `/config` and look for the awesome-hud rows.
 A theme is one file in `hooks/themes/` plus four sounds. `hooks/theme.ts` documents every field.
 
 1. Copy `hooks/themes/cat.ts` to `hooks/themes/<name>.ts` and rename the export.
-2. Draw the face in columns 0–13 of an 18 × 10 grid, one character per pixel and `.` for transparent, with a color per character in `palette`. Give it mid-tone outlines and shades: near-black vanishes on a dark terminal and near-white on a light one.
+2. Draw the face in columns 0–13 of an 18 × 10 grid, one character per pixel and `.` for transparent, with a color per character in `palette`. Give it mid-tone outlines and shades: near-black vanishes on a dark terminal and near-white on a light one. Each color, and the theme's `accent` and `onAccent`, must be one that both usual roundings to 256 colors agree on (a gray, or channels from `00 11 33 44 77 aa cc dd ee ff`): the tests list those that are not, each with the nearest that is.
 3. Columns 14–17 are the mascot's too: at rest it keeps something there (the cat's tail, the chibi's ponytail, the wolf's snow), and a mood that needs an emote puts it there. Write all eight `moods` with `paint`, `stamp`, `shift` and `layer` from `hooks/sprite.ts`, as `cat.ts` does.
 4. Write its `quips`, `verbs`, `spinner`, `turn` and `party` lines.
 5. Add four WAV files to `sounds/<name>/` (`done`, `error`, `waiting`, `party`); `scripts/sounds.py` shows how the built-in ones are synthesized.
@@ -105,7 +115,7 @@ A theme is one file in `hooks/themes/` plus four sounds. `hooks/theme.ts` docume
 
 ## Privacy
 
-Everything runs on your machine unless you turn **PR status** on. The mod reads the figures Claude Code already shows, the output of the test commands Claude runs, the paths and line counts of files Claude edits, and your repository through read-only `git` commands and git's own files. On Linux and Windows it runs a sound player. The only thing it saves is your settings in `/config`.
+Everything runs on your machine unless you turn **PR status** on. The mod reads the figures Claude Code already shows, the output of the test commands Claude runs, the paths and line counts of files Claude edits, your repository through read-only `git` commands and git's own files, and a few terminal variables (`TERM`, `TERM_PROGRAM`, `WT_SESSION` and the like) to pick its symbols. With **Sounds** on, it runs a sound player on Linux and Windows. The only thing it saves is your settings in `/config`.
 
 ## Develop
 
@@ -116,7 +126,7 @@ claude --plugin-dir .       # reloads the mod each time you save
 claude plugin test .        # the tests in hooks/awesome-hud.test.tsx
 claude plugin validate .    # what Claude Code will load, and anything it would refuse
 python3 scripts/sounds.py   # rebuild sounds/ from the recipes in the script
-python3 scripts/preview.py  # redraw assets/preview.gif and assets/moods.gif from the themes (needs bun and Pillow)
+python3 scripts/preview.py  # redraw assets/preview.gif and assets/moods.gif from the themes and the band's own code (needs bun and Pillow)
 ```
 
 ## License

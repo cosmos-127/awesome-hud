@@ -4,10 +4,10 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Git } from '../types'
 import {
   branchSegments, cells, costOf, fit, gauge, headOf, isMiss, limitLabel, middle, parseStatus, partyOf, prettyModel, resetTime, shortTool, targetOf, testSegment, testsOf, treeSegments,
-  turnsLeft,
 } from './format'
 import type { Segment } from './format'
 import { HEIGHT, WIDTH } from './sprite'
+import { asciiFace, isUnicodeTerminal, useSymbols } from './symbols'
 import { THEMES } from './themes'
 
 const BAND = { plugin: 'awesome-hud', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 20, bodyColumns: 100, scroll: { offset: 0, bodyRows: 20 }, view: {} } } as const
@@ -151,6 +151,305 @@ test('every frame of every theme is a full grid of known pixels', async () => {
   }
 })
 
+// What a terminal makes of a color. Claude Code snaps each channel of a sprite color to a multiple of 17 and paints it
+// as 24-bit; a terminal without 24-bit color (an older Apple Terminal, tmux without passthrough, a bare
+// TERM=xterm-256color over SSH) maps it onto the xterm palette, by the nearest entry or by chalk's formula, which rounds
+// each channel to one of the cube's six levels as if they were evenly spaced. A color is safe when both land together.
+type Rgb = readonly [number, number, number]
+const CUBE_LEVELS = [0, 95, 135, 175, 215, 255]
+const XTERM: Rgb[] = [
+  ...CUBE_LEVELS.flatMap(r => CUBE_LEVELS.flatMap(g => CUBE_LEVELS.map((b): Rgb => [r, g, b]))),
+  ...Array.from({ length: 24 }, (_, i): Rgb => [8 + 10 * i, 8 + 10 * i, 8 + 10 * i]),
+]
+const channelsOf = (c: number): Rgb => [(c >> 16) & 255, (c >> 8) & 255, c & 255]
+const distance = (a: Rgb, b: Rgb) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])
+const nearestXterm = (c: Rgb) => XTERM.reduce((best, p) => (distance(p, c) < distance(best, c) ? p : best))
+const chalkXterm = ([r, g, b]: Rgb): Rgb => {
+  if (r === g && g === b) return r < 8 ? XTERM[0]! : r > 248 ? XTERM[215]! : XTERM[216 + Math.round(((r - 8) / 247) * 24)]!
+  const level = (v: number) => CUBE_LEVELS[Math.round((v / 255) * 5)]!
+  return [level(r), level(g), level(b)]
+}
+const isOnGrid = (c: Rgb) => c.every(v => v % 17 === 0)
+const isSafe = (c: Rgb) => isOnGrid(c) && distance(nearestXterm(c), chalkXterm(c)) <= 18
+const hex6 = (c: Rgb) => `0x${c.map(v => v.toString(16).padStart(2, '0')).join('')}`
+const SAFE_COLORS = Array.from({ length: 16 ** 3 }, (_, i): Rgb => [(i >> 8) * 17, ((i >> 4) & 15) * 17, (i & 15) * 17]).filter(isSafe)
+const safeNear = (c: Rgb) => SAFE_COLORS.reduce((best, p) => (distance(p, c) < distance(best, c) ? p : best))
+const luminance = (c: Rgb) => {
+  const [r, g, b] = c.map(v => ((v / 255) <= 0.04045 ? v / 255 / 12.92 : (((v / 255) + 0.055) / 1.055) ** 2.4)) as [number, number, number]
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+const contrast = (a: Rgb, b: Rgb) => (Math.max(luminance(a), luminance(b)) + 0.05) / (Math.min(luminance(a), luminance(b)) + 0.05)
+const hexOf = (s: string): Rgb => channelsOf(Number.parseInt(s.slice(1), 16))
+
+test('every theme color is one a terminal paints as drawn: on the 4-bit grid, and the same 256-color by either formula', async () => {
+  const unsafe: string[] = []
+  for (const [name, t] of Object.entries(THEMES)) {
+    const colors: [string, Rgb][] = [
+      ...Object.entries(t.palette).map(([k, c]): [string, Rgb] => [`palette.${k}`, channelsOf(c)]),
+      ['accent', hexOf(t.accent)],
+      ['onAccent', hexOf(t.onAccent)],
+    ]
+    for (const [key, c] of colors) if (!isSafe(c)) unsafe.push(`${name}.${key} ${hex6(c)}: use ${hex6(safeNear(c))}`)
+  }
+  expect(unsafe).toEqual([])
+})
+
+test('colors that touch in a frame stay apart in a 256-color terminal, so no outline folds into the fill', async () => {
+  const merged: string[] = []
+  for (const [name, t] of Object.entries(THEMES)) {
+    const pairs = new Set<string>()
+    for (const frames of Object.values(t.moods)) {
+      for (const f of frames) {
+        f.px.forEach((row, y) =>
+          [...row].forEach((a, x) => {
+            for (const b of [row[x + 1], f.px[y + 1]?.[x]]) if (a !== '.' && b !== undefined && b !== '.' && a !== b) pairs.add([a, b].sort().join(''))
+          }),
+        )
+      }
+    }
+    for (const pair of pairs) {
+      const [a, b] = [...pair].map(k => channelsOf(t.palette[k]!)) as [Rgb, Rgb]
+      const apart = Math.min(distance(a, b), distance(nearestXterm(a), nearestXterm(b)), distance(chalkXterm(a), chalkXterm(b)))
+      if (apart < 24) merged.push(`${name}: ${pair[0]} and ${pair[1]} are ${Math.round(apart)} apart`)
+    }
+  }
+  expect(merged).toEqual([])
+})
+
+test("the model chip's text reads on its accent in a 256-color terminal too", async () => {
+  for (const [name, t] of Object.entries(THEMES)) {
+    const [text, back] = [hexOf(t.onAccent), hexOf(t.accent)]
+    for (const [how, map] of [['24-bit', (c: Rgb) => c], ['nearest', nearestXterm], ['chalk', chalkXterm]] as const) {
+      expect([name, how, contrast(map(text), map(back)) >= 4.5]).toEqual([name, how, true])
+    }
+  }
+})
+
+test('the terminal draws Unicode marks by the rule Claude Code uses for its own', async () => {
+  const win = { OS: 'Windows_NT' }
+  expect([
+    isUnicodeTerminal({}),
+    isUnicodeTerminal({ TERM: 'xterm-256color' }),
+    isUnicodeTerminal({ TERM: 'linux' }),
+    isUnicodeTerminal(win),
+    isUnicodeTerminal({ ...win, WT_SESSION: '6f1b8d0e' }),
+    isUnicodeTerminal({ ...win, TERM_PROGRAM: 'vscode' }),
+    isUnicodeTerminal({ ...win, TERM: 'xterm-256color' }),
+    isUnicodeTerminal({ ...win, TERM: 'cygwin' }),
+    isUnicodeTerminal({ ...win, TERMINAL_EMULATOR: 'JetBrains-JediTerm' }),
+  ]).toEqual([true, true, false, false, true, true, true, false, true])
+})
+
+test('every text face has an ASCII form, with no character left without a stand-in', async () => {
+  for (const [name, t] of Object.entries(THEMES)) {
+    for (const [mood, face] of Object.entries(t.faces)) {
+      const plain = asciiFace(face)
+      expect([name, mood, /^[\x20-\x7e]*$/.test(plain)]).toEqual([name, mood, true])
+      // A `?` that is the face's own (the cat's puzzled one) stays; none comes from a character that had no stand-in.
+      expect([name, mood, [...plain].filter(c => c === '?').length]).toEqual([name, mood, [...face].filter(c => c === '?').length])
+    }
+  }
+  expect(asciiFace('(òᴗó)و')).toBe('(>u<)/')
+})
+
+// A band with everything on it (the repository, what Claude did and ran, a pull request, two plan windows, the
+// effort), drawn once with each set of marks: the same things said, one set of them plain ASCII.
+for (const isAscii of [true, false]) {
+  const name = isAscii ? 'with ASCII symbols the band is plain ASCII from the chip to the quip' : 'with Unicode symbols the same band draws its marks'
+  test(name, { options: { symbols: isAscii ? 'ascii' : 'unicode', prStatus: true } }, async ($, on) => {
+    const clock = mock.clock(on)
+    const status = STATUS('main', '# branch.upstream origin/main', '# branch.ab +2 -1', '# stash 1', '1 .M N... 100644 100644 100644 x y src/a.ts', '1 M. N... 100644 100644 100644 x y src/b.ts', '? notes.md')
+    const view = {
+      number: 7,
+      url: 'https://github.com/o/r/pull/7',
+      state: 'OPEN',
+      isDraft: false,
+      reviewDecision: 'APPROVED',
+      statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }, { status: 'IN_PROGRESS', conclusion: null }, { state: 'FAILURE' }],
+    }
+    linuxHost(on, { status, gh: JSON.stringify(view) })
+    bandHost(on, '/p')
+    on('ui.toast', () => ({ value: undefined }))
+    on('session.measure', ($, e) => ({ changed: e.changed }))
+    on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200_000 }, rateLimits: [] } }))
+    on('command.register', () => ({ value: { command: 'awesome-hud' } }))
+    on('session.start', ($, e) => ({ cwd: e.cwd }))
+    on('command.run', () => ({ text: 'Set effort level to max' }))
+    const answers: ToolCallResult[] = [patchOf(['-a', '+b', '+c']), patchOf(['-b', '+d']), created('x\ny\n'), ranBash(' 3 pass\n 0 fail')]
+    on('tool.call', () => answers.shift()!)
+    try {
+      await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+      await $.tool.call({ tool: 'Edit', file_path: '/p/a.ts', old_string: 'a', new_string: 'b' })
+      await $.tool.call({ tool: 'Edit', file_path: '/p/a.ts', old_string: 'b', new_string: 'c' })
+      await $.tool.call({ tool: 'Write', file_path: '/p/b.ts', content: 'x\ny\n' })
+      await $.tool.call({ tool: 'Bash', command: 'npm test' })
+      await $.turn.complete(ANSWERED)
+      await clock.advance(0)
+      const inHours = (h: number) => new Date(clock.now() + h * 3_600_000).toISOString()
+      const rateLimits = [{ kind: 'five_hour', percentUsed: 85, resetsAt: inHours(1) }, { kind: 'seven_day', percentUsed: 80, resetsAt: inHours(60) }]
+      await $.session.measure({ context: { window: 200_000, percent: 42 }, rateLimits, changed: ['context', 'rateLimits'] })
+      await $.command.run({ command: 'effort', args: 'max', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 100 } })
+      await clock.advance(10_000)
+      const band = await $.ui.mount(HINT)
+      const has = async (text: RegExp) => (await band.find({ type: 'Text', text })) !== undefined
+      if (isAscii) {
+        const texts = (await band.findAll({ type: 'Text' })).map(t => t.text)
+        expect(texts.filter(t => /[^\x20-\x7e]/.test(t))).toEqual([])
+        expect(await has(/ Opus 5\.5 \| max /)).toBe(true)
+        expect(await has(/^git main \^2 v1 +\| \+ 1 {2}\* 1 {2}\? 1 new \| 1 stash$/)).toBe(true)
+        expect(await has(/^edited 2 files \+5 -2 \| ok 3 passed \(0m ago\) \| .*PR #7 x1 approved$/)).toBe(true)
+        expect(await has(/^ 5h #{10}-{2} {2}85% {2}resets in (?:59m|1h 0m) - 7d #+-* {2}80% resets 2d 1[12]h$/)).toBe(true)
+        expect(await has(/^> $/)).toBe(true)
+      } else {
+        expect(await has(/ Opus 5\.5 \| ● max /)).toBe(true)
+        expect(await has(/^⎇ main ↑2 ↓1 +│ ● 1 {2}✚ 1 {2}\? 1 new │ ≡ 1 stash$/)).toBe(true)
+        expect(await has(/^✎ 2 files \+5 −2 │ ✓ 3 passed \(0m ago\) │ .*PR #7 ✗1 approved$/)).toBe(true)
+        expect(await has(/^ 5h ━{10}─{2} {2}85% {2}↻ in (?:59m|1h 0m) · 7d ━+╸?─* {2}80% ↻ 2d 1[12]h$/)).toBe(true)
+        expect(await has(/^» $/)).toBe(true)
+      }
+      await band.unmount()
+    } finally {
+      useSymbols(false)
+    }
+  })
+}
+
+// Which set the band draws with, by the terminal's environment and the setting.
+const SYMBOL_CASES = [
+  ['the bare Windows console gets ASCII marks, as Claude Code gives it ASCII symbols', {}, { OS: 'Windows_NT' }, '> '],
+  ['Windows Terminal keeps the Unicode marks', {}, { OS: 'Windows_NT', WT_SESSION: '6f1b8d0e' }, '» '],
+  ['the Linux console gets ASCII marks', {}, { TERM: 'linux' }, '> '],
+  ['Unicode symbols are drawn on the bare Windows console when the setting says so', { symbols: 'unicode' }, { OS: 'Windows_NT' }, '» '],
+  ['ASCII symbols are drawn anywhere when the setting says so', { symbols: 'ascii' }, {}, '> '],
+] as const
+for (const [name, options, env, mark] of SYMBOL_CASES) {
+  test(name, { options }, async ($, on) => {
+    mock.clock(on)
+    linuxHost(on, { env })
+    bandHost(on)
+    on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200_000 }, rateLimits: [] } }))
+    on('command.register', () => ({ value: { command: 'awesome-hud' } }))
+    on('session.start', ($, e) => ({ cwd: e.cwd }))
+    try {
+      await $.session.start({ cwd: '/home/me/project', surface: 'terminal', isInteractive: true })
+      const band = await $.ui.mount(HINT)
+      expect((await band.find({ type: 'Text', text: /^[»>] $/ }))?.text).toBe(mark)
+      await band.unmount()
+    } finally {
+      useSymbols(false)
+    }
+  })
+}
+
+test('with ASCII symbols the quip line at rest names failing tests, a rebase and the agents at work in ASCII', { options: { symbols: 'ascii' } }, async ($, on) => {
+  const clock = mock.clock(on)
+  const conflicts = ['u UU N... 100644 100644 100644 100644 x y z src/a.ts', 'u AA N... 100644 100644 100644 100644 x y z src/b.ts']
+  linuxHost(on, {
+    status: STATUS('(detached)', ...conflicts),
+    files: {
+      '/p/.git/HEAD': '9091f7b7a09d414d635f49b0cf3842ae592d0b17\n',
+      '/p/.git/rebase-merge/msgnum': '2\n',
+      '/p/.git/rebase-merge/end': '5\n',
+      '/p/.git/rebase-merge/head-name': 'refs/heads/main\n',
+    },
+  })
+  bandHost(on, '/p')
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200_000 }, rateLimits: [] } }))
+  on('command.register', () => ({ value: { command: 'awesome-hud' } }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  on('turn.start', ($, e) => ({ turnId: e.turnId }))
+  on('tool.call', () => ({ result: { stdout: '', stderr: '', interrupted: false }, text: 'Tests:  2 failed, 10 passed, 12 total' }))
+  on('agent.list', () => ({ value: [{ id: 'a2', type: 'general-purpose', status: 'running', description: 'refactor auth' }] }))
+  try {
+    await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+    await $.turn.start({ text: 'a', turnId: 't1' })
+    await $.tool.call({ tool: 'Bash', command: 'npm test' })
+    await $.turn.complete(ANSWERED)
+    await clock.advance(10_000)
+    const band = await $.ui.mount(HINT)
+    expect(await band.find({ type: 'Text', text: /^git main\|REBASE 2\/5 +\| 2 conflicts$/ })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: /^x 2 tests failed - 0m ago - git rebasing 2\/5, 2 conflicts - ~ 1 agent: refactor auth$/ })).toBeDefined()
+    await band.unmount()
+  } finally {
+    useSymbols(false)
+  }
+})
+
+test('with ASCII symbols a linked worktree is named after its project with a >', { options: { symbols: 'ascii' } }, async ($, on) => {
+  const clock = mock.clock(on)
+  const gitDir = '/p/.git/worktrees/brave-fox'
+  linuxHost(on, { gitDir, top: '/p/.claude/worktrees/brave-fox', files: { [`${gitDir}/HEAD`]: 'ref: refs/heads/feat\n', [`${gitDir}/commondir`]: '../..\n' } })
+  bandHost(on, '/p/.claude/worktrees/brave-fox')
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200_000 }, rateLimits: [] } }))
+  on('command.register', () => ({ value: { command: 'awesome-hud' } }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  try {
+    await $.session.start({ cwd: '/p/.claude/worktrees/brave-fox', surface: 'terminal', isInteractive: true })
+    await $.turn.complete(ANSWERED)
+    await clock.advance(0)
+    const band = await $.ui.mount(HINT)
+    expect(await band.find({ type: 'Text', text: /^ Opus 5\.5 {2}p > brave-fox - 0m$/ })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: /^git feat$/ })).toBeDefined()
+    await band.unmount()
+  } finally {
+    useSymbols(false)
+  }
+})
+
+test('with ASCII symbols /awesome-hud files reads in ASCII, the line the model reads and the rows under it', { options: { symbols: 'ascii' } }, async ($, on) => {
+  mock.clock(on)
+  linuxHost(on, { status: STATUS('main', '1 .M N... 100644 100644 100644 x y src/a.ts', '? src/new.ts'), env: { HOME: '/home/me' } })
+  on('session.cwd', () => ({ value: '/p' }))
+  on('ui.toast', () => ({ value: undefined }))
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200_000 }, rateLimits: [] } }))
+  on('command.register', () => ({ value: { command: 'awesome-hud' } }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  on('ui.render', { component: 'CommandOutput' }, ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>{e.props.text}</Text>
+  })
+  const answers: ToolCallResult[] = [patchOf(['-a', '+b', '+c']), created('x\ny\n'), patchOf(['-b', '+d']), created('note\n')]
+  on('tool.call', () => answers.shift()!)
+  try {
+    await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+    await $.tool.call({ tool: 'Edit', file_path: '/p/src/a.ts', old_string: 'a', new_string: 'b' })
+    await $.tool.call({ tool: 'Write', file_path: '/p/src/new.ts', content: 'x\ny\n' })
+    await $.tool.call({ tool: 'Edit', file_path: '/p/src/a.ts', old_string: 'b', new_string: 'd' })
+    await $.tool.call({ tool: 'Write', file_path: '/home/me/.claude/projects/p/memory/MEMORY.md', content: 'note\n' })
+    const typed = { command: 'awesome-hud', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 100 } } as const
+    const { text = '' } = await $.command.run({ ...typed, args: 'files' })
+    expect(text).toMatch(/^Claude edited 2 files in the project this session \(\+5 -2\), 2 not yet committed; 1 outside it\. As of \d+:\d\d:\d\d[ap]m\.$/)
+    const row = await $.ui.mount({ plugin: 'awesome-hud', component: 'CommandOutput', surface: 'terminal', props: { command: 'awesome-hud', args: 'files', text, isErrored: false } })
+    const lines = (await row.findAll({ type: 'Text' })).map(t => t.text)
+    expect(lines.filter(l => /[^\x20-\x7e]/.test(l))).toEqual([])
+    expect(lines).toContain('src/a.ts    x2  +3  -2  changed')
+    expect(lines).toContain('src/new.ts  x1  +2  -0  new')
+    expect(lines).toContain('~/.claude/projects/p/memory/MEMORY.md  x1  +1  -0')
+    await row.unmount()
+  } finally {
+    useSymbols(false)
+  }
+})
+
+test('with ASCII symbols a band too narrow for the mascot writes its text face in ASCII', { options: { symbols: 'ascii', theme: 'chibi' } }, async ($, on) => {
+  mock.clock(on)
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200_000 }, rateLimits: [] } }))
+  on('session.model', () => ({ value: 'claude-opus-5-5' }))
+  on('session.cwd', () => ({ value: '/home/me/.claude' }))
+  on('command.register', () => ({ value: { command: 'awesome-hud' } }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  hintLine(on)
+  try {
+    await $.session.start({ cwd: '/home/me/.claude', surface: 'terminal', isInteractive: true })
+    const narrow = await $.ui.mount({ ...HINT, viewport: { columns: 50, rows: 40 } })
+    expect(await narrow.find({ type: 'Text', text: /\(ouo\)/ })).toBeDefined()
+    expect(await narrow.find({ type: 'Text', text: /ᴗ/ })).toBeUndefined()
+    await narrow.unmount()
+  } finally {
+    useSymbols(false)
+  }
+})
+
 test('at rest every theme draws beside its face, so no gap opens between the mascot and the stats', async () => {
   for (const t of Object.values(THEMES)) expect(t.moods.idle[0]!.px.some(row => /[^.]/.test(row.slice(14)))).toBe(true)
 })
@@ -164,7 +463,7 @@ test('every theme has a sound for every event, and none is named files', async (
   expect(Object.hasOwn(THEMES, 'files')).toBe(false)
 })
 
-test("a long turn answered plays the theme's done sound through the Linux host's player", async ($, on) => {
+test("a long turn answered plays the theme's done sound through the Linux host's player", { options: { sounds: true } }, async ($, on) => {
   const clock = mock.clock(on)
   const { played } = linuxHost(on)
   await $.turn.complete(ANSWERED)
@@ -174,7 +473,27 @@ test("a long turn answered plays the theme's done sound through the Linux host's
   expect(played[0]![1]).toMatch(/\/sounds\/cat\/done\.wav$/)
 })
 
-test('one error sound a turn, and none for a party turn, a quick turn or an interrupt; waiting on an ask', async ($, on) => {
+test('on Windows the sound plays through PowerShell, the file named in the environment and never in the script', { options: { sounds: true } }, async ($, on) => {
+  const clock = mock.clock(on)
+  on('env.get', ($, e) => ({ value: e.name === 'OS' ? 'Windows_NT' : undefined }))
+  const runs: { argv: string[]; env?: Record<string, string> }[] = []
+  on('process.run', ($, e) => {
+    runs.push({ argv: [...e.argv], env: (e as { init?: { env?: Record<string, string> } }).init?.env })
+    return { value: { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+  })
+  on('turn.complete', () => ({ text: '' }))
+  await $.turn.complete(ANSWERED)
+  await clock.advance(0)
+  const run = runs.find(r => r.argv[0] === 'powershell')
+  expect(run?.argv.slice(0, 4)).toEqual(['powershell', '-NoProfile', '-NonInteractive', '-Command'])
+  expect(run?.env?.AWESOME_HUD_SOUND).toMatch(/\/sounds\/cat\/done\.wav$/)
+  // A path in the script is a path to quote, and a curly quote in one is a PowerShell parse error.
+  expect(run?.argv.at(-1)).toContain('$env:AWESOME_HUD_SOUND')
+  expect(run?.argv.at(-1)).not.toMatch(/\.wav|sounds/)
+  expect(runs.filter(r => r.argv[0] === 'uname')).toHaveLength(0)
+})
+
+test('one error sound a turn, and none for a party turn, a quick turn or an interrupt; waiting on an ask', { options: { sounds: true } }, async ($, on) => {
   const clock = mock.clock(on)
   const { played } = linuxHost(on)
   on('session.cwd', () => ({ value: '/home/me/project' }))
@@ -271,7 +590,7 @@ test("from 70% full the context row names what takes the most of it, as the turn
   await band.unmount()
 })
 
-test('the context breakdown says where auto-compact starts, or that it is off and the turns run to full', async ($, on) => {
+test('the context breakdown says where auto-compact starts, or that it is off', async ($, on) => {
   mock.clock(on)
   linuxHost(on)
   bandHost(on)
@@ -279,20 +598,16 @@ test('the context breakdown says where auto-compact starts, or that it is off an
   // Auto-compact at 90% of a 200k window.
   let breakdown = { categories: [], isAutoCompactEnabled: true, autoCompactThreshold: 180_000 }
   on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200_000, percent: 80, breakdown }, rateLimits: [] } as never }))
-  for (const percent of [70, 75, 80]) {
-    await $.session.measure({ context: { window: 200_000, percent }, rateLimits: [], changed: ['context'] })
-    await $.turn.complete(ANSWERED)
-  }
+  await $.session.measure({ context: { window: 200_000, percent: 80 }, rateLimits: [], changed: ['context'] })
+  await $.turn.complete(ANSWERED)
   const on90 = await $.ui.mount(HINT)
   expect(await on90.find({ type: 'Text', text: /^┊─$/ })).toBeDefined()
-  expect(await on90.find({ type: 'Text', text: /^ {2}~2 turns left$/ })).toBeDefined()
   await on90.unmount()
 
   breakdown = { ...breakdown, isAutoCompactEnabled: false }
   await $.turn.complete(ANSWERED)
   const off = await $.ui.mount(HINT)
   expect(await off.find({ type: 'Text', text: /^──$/ })).toBeDefined()
-  expect(await off.find({ type: 'Text', text: /^ {2}~4 turns to full$/ })).toBeDefined()
   await off.unmount()
 })
 
@@ -369,7 +684,7 @@ test('an edit held for review, and a file outside the project, neither count nor
   await band.unmount()
 })
 
-test("a subagent's test run is the band's last run, with no party", async ($, on) => {
+test("a subagent's test run is the band's last run, with no party", { options: { sounds: true } }, async ($, on) => {
   const clock = mock.clock(on)
   const { played } = linuxHost(on)
   bandHost(on)
@@ -437,7 +752,22 @@ test('the compact layout puts the branch after the folder', { options: { layout:
   await band.unmount()
 })
 
-test('with sounds off nothing plays', { options: { sounds: false } }, async ($, on) => {
+// The sounds are the person's to turn on: a turn long enough for the done sound, and a failed tool, play nothing until then.
+test('sounds are off until the Sounds setting turns them on', async ($, on) => {
+  const clock = mock.clock(on)
+  const { played } = linuxHost(on)
+  on('session.cwd', () => ({ value: '/home/me/project' }))
+  on('turn.start', ($, e) => ({ turnId: e.turnId }))
+  on('tool.call', () => ({ isError: true, result: 'Exit code 1', text: 'Exit code 1' }))
+  await $.turn.start({ text: 'a', turnId: 't1' })
+  await $.tool.call({ tool: 'Bash', command: 'false' })
+  await $.turn.complete({ ...ANSWERED, reason: 'error' })
+  await $.turn.complete(ANSWERED)
+  await clock.advance(0)
+  expect(played).toEqual([])
+})
+
+test('with Sounds set off nothing plays', { options: { sounds: false } }, async ($, on) => {
   const clock = mock.clock(on)
   const { played } = linuxHost(on)
   await $.turn.complete(ANSWERED)
@@ -724,7 +1054,7 @@ test('the turn line keeps the latest turns, not the longest', async ($, on) => {
   await line.unmount()
 })
 
-test('a search that found nothing is no error', async ($, on) => {
+test('a search that found nothing is no error', { options: { sounds: true } }, async ($, on) => {
   const clock = mock.clock(on)
   const { played } = linuxHost(on)
   bandHost(on)
@@ -1096,12 +1426,6 @@ test('model ids read as claude-hud reads them', async () => {
   expect(prettyModel('claude-haiku-4-5-20251001')).toBe('Haiku 4.5')
   expect(prettyModel('claude-3-5-sonnet-20241022')).toBe('Sonnet 3.5')
   expect(prettyModel('my-gateway-model')).toBe('my-gateway-model')
-})
-
-test('turns left comes from recent growth and waits for history', async () => {
-  expect(turnsLeft([10], 10, 92)).toBe(null)
-  expect(turnsLeft([10, 20, 30], 30, 92)).toBe(6)
-  expect(turnsLeft([30, 20, 10], 10, 92)).toBe(null)
 })
 
 test("tests, commits and pushes are worth a party; Claude Code's reading of a git command decides, else its text with quotes and dry runs aside", async () => {

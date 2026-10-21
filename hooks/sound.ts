@@ -4,6 +4,17 @@ import type { EngineInterface } from 'claude-code'
 // so on Linux the first of these the host has plays the file, and on Windows PowerShell does.
 const LINUX_PLAYERS: readonly (readonly string[])[] = [['pw-play'], ['paplay'], ['aplay', '-q']]
 
+// PowerShell takes the file's path from the environment, so no character in it (a quote, a `#`, an accent) meets
+// a parser, and opens it as a stream: SoundPlayer reads a path as a URL, and a `#` or `%` in one would cut it short.
+const WINDOWS_PATH_VARIABLE = 'AWESOME_HUD_SOUND'
+const WINDOWS_ARGV = [
+  'powershell',
+  '-NoProfile',
+  '-NonInteractive',
+  '-Command',
+  `$s = [IO.File]::OpenRead($env:${WINDOWS_PATH_VARIABLE}); try { (New-Object Media.SoundPlayer $s).PlaySync() } finally { $s.Dispose() }`,
+]
+
 type Player = readonly string[] | 'engine' | 'windows' | null
 
 // Found once per load; null where the host has none.
@@ -27,11 +38,9 @@ export async function play($: EngineInterface, asset: string) {
     if (player === null) return
     if (player === 'engine') return await $.audio.play({ asset })
     const file = `${$.plugin.root}/${asset}`
-    // shortcut: the Windows branch is untested; check it on a Windows terminal before relying on it.
-    const argv = player === 'windows'
-      ? ['powershell', '-NoProfile', '-NonInteractive', '-Command', `(New-Object Media.SoundPlayer '${file.replaceAll("'", "''")}').PlaySync()`]
-      : [...player, file]
-    await $.process.run(argv, { timeoutMs: 10_000 })
+    // shortcut: the Windows branch has not run on Windows; its script parses in PowerShell 7, and the rest is the stock SoundPlayer.
+    if (player === 'windows') await $.process.run(WINDOWS_ARGV, { timeoutMs: 10_000, env: { [WINDOWS_PATH_VARIABLE]: file } })
+    else await $.process.run([...player, file], { timeoutMs: 10_000 })
   } catch {
     // A sound that cannot play is no reason to fail the hook that asked for it.
   }

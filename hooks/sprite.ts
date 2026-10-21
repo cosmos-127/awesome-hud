@@ -70,10 +70,10 @@ export const DROP = ['.b.', 'bbb', 'bbb', '.b.']
 
 /** A rainbow's colors as R O Y G B V, for a palette that paints one. */
 export const RAINBOW: Record<string, number> = {
-  R: 0xff4d4d,
-  O: 0xff9f1a,
-  Y: 0xffe14d,
-  G: 0x4dd96b,
-  B: 0x4da6ff,
-  V: 0xa66bff,
+  R: 0xff4444,
+  O: 0xffaa44,
+  Y: 0xffdd44,
+  G: 0x44dd44,
+  B: 0x44aaff,
+  V: 0xaa44ee,
 }

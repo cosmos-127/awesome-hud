@@ -1,6 +1,7 @@
 import type { BuiltinToolResults, SessionMeasureInput, SessionUsage } from 'claude-code'
 
 import type { FileEdit, FilesReport, Git, GitOp, Limit, Meter, Mood, PathState, Pr, TestRun } from '../types'
+import { sym } from './symbols'
 
 // Thresholds from claude-hud: context warns at 70 and is critical at 85, quota at 75 and 90.
 export const CONTEXT_WARN = 70
@@ -10,7 +11,8 @@ export const QUOTA_CRIT = 90
 // Where auto-compact is taken to start, as a percent of the window, until the context breakdown says where it does.
 export const COMPACT_AT = 92
 export const BAR = 12
-export const EFFORT_GLYPH: Record<string, string> = { low: '○', medium: '◔', high: '◑', xhigh: '◕', max: '●' }
+/** The marker before the effort level on the model chip; none where the terminal has no such marks. */
+export const effortMark = (level: string) => sym.effort[level] ?? ''
 // A branch's name past this many cells loses its middle: its prefix and its end say the most.
 const BRANCH_CELLS = 24
 // A fetch older than a day may have missed what the upstream gained since.
@@ -34,25 +36,17 @@ export const isHot = (m: Meter | null) =>
 // Worry only shows while the mascot has nothing better to do.
 export const shown = (m: Mood, hot: boolean): Mood => (hot && (m === 'idle' || m === 'done') ? 'sweat' : m)
 
-/** Turns of context left before auto-compact, from how much the recent turns grew it; null with too little history. */
-export const turnsLeft = (history: readonly number[], percent: number | undefined, compactAt: number): number | null => {
-  if (percent === undefined) return null
-  const growth = history.slice(-6).flatMap((p, i, all) => (i > 0 && p > all[i - 1]! ? [p - all[i - 1]!] : []))
-  if (growth.length < 2) return null
-  const avg = growth.reduce((a, b) => a + b, 0) / growth.length
-  return Math.max(0, Math.floor((compactAt - percent) / avg))
-}
-
 /**
  * A bar of `width` cells, its used part and its free part apart so each takes its own color. It fills by half
- * cells, `╸` the odd half, and `┊` marks the free cell where `tick`, a percent, falls.
+ * cells, `╸` the odd half (a whole cell where the marks have no half), and `┊` marks the free cell where `tick`, a
+ * percent, falls.
  */
 const thinBar = (pct: number | undefined, width = BAR, tick?: number): [string, string] => {
   const halves = Math.max(0, Math.min(2 * width, Math.round(((pct ?? 0) / 100) * 2 * width)))
-  const used = '━'.repeat(Math.floor(halves / 2)) + (halves % 2 === 1 ? '╸' : '')
-  const free = [...'─'.repeat(width - used.length)]
+  const used = sym.used.repeat(Math.floor(halves / 2)) + (halves % 2 === 1 ? sym.half || sym.used : '')
+  const free = [...sym.free.repeat(width - used.length)]
   const at = tick === undefined ? -1 : Math.floor((tick / 100) * width) - used.length
-  if (at >= 0 && at < free.length) free[at] = '┊'
+  if (at >= 0 && at < free.length) free[at] = sym.tick
   return [used, free.join('')]
 }
 
@@ -97,20 +91,20 @@ export const planSegments = (limits: readonly Limit[], now: number, accent: stri
     { key: first.kind, keep: Infinity, runs: gaugeRuns(limitLabel(first.kind), first.percentUsed, quotaAlert(first.percentUsed), accent) },
   ]
   if (first.resetsAt && left > 0) {
-    segments.push({ key: `${first.kind}-in`, sep: '  ', keep: 70, runs: [{ text: `↻ in ${duration(left)}`, dim: true }] })
-    if (!isCrowded) segments.push({ key: `${first.kind}-at`, sep: ' · ', keep: 30, runs: [{ text: resetTime(first.resetsAt, now, timeZone), dim: true }] })
+    segments.push({ key: `${first.kind}-in`, sep: '  ', keep: 70, runs: [{ text: `${sym.reset} in ${duration(left)}`, dim: true }] })
+    if (!isCrowded) segments.push({ key: `${first.kind}-at`, sep: ` ${sym.dot} `, keep: 30, runs: [{ text: resetTime(first.resetsAt, now, timeZone), dim: true }] })
   }
   for (const l of rest) {
     const alert = quotaAlert(l.percentUsed)
     if (alert === undefined) {
-      segments.push({ key: l.kind, sep: ' · ', keep: 65, runs: [{ text: `${limitLabel(l.kind)} ${Math.round(l.percentUsed)}%`, dim: true }] })
+      segments.push({ key: l.kind, sep: ` ${sym.dot} `, keep: 65, runs: [{ text: `${limitLabel(l.kind)} ${Math.round(l.percentUsed)}%`, dim: true }] })
       continue
     }
     // Beside another, a gauge's label needs no padding to line up.
     const runs = gaugeRuns(limitLabel(l.kind), l.percentUsed, alert, accent).map((r, i) => (i === 0 ? { ...r, text: r.text.trimStart() } : r))
-    segments.push({ key: l.kind, sep: ' · ', keep: 90, runs })
+    segments.push({ key: l.kind, sep: ` ${sym.dot} `, keep: 90, runs })
     const leftOf = untilReset(l, now)
-    if (leftOf > 0) segments.push({ key: `${l.kind}-in`, sep: ' ', keep: 60, runs: [{ text: `↻ ${duration(leftOf)}`, dim: true }] })
+    if (leftOf > 0) segments.push({ key: `${l.kind}-in`, sep: ' ', keep: 60, runs: [{ text: `${sym.reset} ${duration(leftOf)}`, dim: true }] })
   }
   return segments
 }
@@ -133,7 +127,7 @@ export const middle = (text: string, max: number) => {
   const chars = [...text]
   const head = Math.ceil((max - 1) / 2)
   const tail = max - 1 - head
-  return `${chars.slice(0, head).join('')}…${tail > 0 ? chars.slice(-tail).join('') : ''}`
+  return `${chars.slice(0, head).join('')}${sym.ellipsis}${tail > 0 ? chars.slice(-tail).join('') : ''}`
 }
 
 /** The segments that fit in `columns` cells, the least kept dropped first and of those the rightmost; all of them where the width is unknown. */
@@ -209,7 +203,7 @@ export const targetOf = (input: Record<string, unknown>) => {
   if (typeof raw !== 'string') return undefined
   const text = clean(raw)
   const short = /[/\\]/.test(text) && !input.command ? text.split(/[/\\]/).pop() || text : text
-  return short.length > 20 ? `${short.slice(0, 19)}…` : short
+  return short.length > 20 ? `${short.slice(0, 19)}${sym.ellipsis}` : short
 }
 
 export const shortTool = (name: string) => clean(/^mcp__.+__.+$/.test(name) ? name.split('__').pop() ?? name : name)
@@ -472,13 +466,13 @@ export const branchSegments = (git: Git, width = 0): Segment[] => {
       key: 'branch',
       sep: ' ',
       keep: Infinity,
-      runs: [{ text: `⎇ ${name}`, color: 'suggestion' }, ...(git.op ? [{ text: `|${OP_LABEL[git.op.kind]}${stepOf(git.op)}`, color: 'warning', bold: true }] : [])],
+      runs: [{ text: `${sym.branch} ${name}`, color: 'suggestion' }, ...(git.op ? [{ text: `|${OP_LABEL[git.op.kind]}${stepOf(git.op)}`, color: 'warning', bold: true }] : [])],
     },
   ]
   // Behind counts only what the last fetch saw: past a day it is dim, not a warning.
   const sync: Run[] = [
-    ...(git.ahead > 0 ? [{ text: `↑${git.ahead}`, dim: true }] : []),
-    ...(git.behind > 0 ? [{ text: `${git.ahead > 0 ? ' ' : ''}↓${git.behind}`, color: git.isFetchStale ? undefined : 'warning', dim: git.isFetchStale }] : []),
+    ...(git.ahead > 0 ? [{ text: `${sym.up}${git.ahead}`, dim: true }] : []),
+    ...(git.behind > 0 ? [{ text: `${git.ahead > 0 ? ' ' : ''}${sym.down}${git.behind}`, color: git.isFetchStale ? undefined : 'warning', dim: git.isFetchStale }] : []),
   ]
   if (sync.length > 0) segments.push({ key: 'sync', sep: ' ', keep: 90, runs: sync })
   if (git.upstream === 'gone') segments.push({ key: 'upstream', sep: ' ', keep: 30, runs: [{ text: 'upstream gone', color: 'warning' }] })
@@ -491,14 +485,15 @@ export const branchSegments = (git: Git, width = 0): Segment[] => {
 /** The tree: conflicts in words, then the files staged, changed and untracked, `✓ clean` when none, and the stashes; dim when the counts are an earlier status's. */
 export const treeSegments = (git: Git): Segment[] => {
   const segments: Segment[] = []
-  if (git.conflicts > 0) segments.push({ key: 'conflicts', sep: ' │ ', keep: 95, runs: [{ text: plural(git.conflicts, 'conflict'), color: 'error', bold: true }] })
-  const counts = ([['● ', git.staged, '', 'success'], ['✚ ', git.unstaged, '', 'warning'], ['? ', git.untracked ?? 0, ' new', undefined]] as const).flatMap(([mark, n, word, color]) =>
+  const bar = ` ${sym.bar} `
+  if (git.conflicts > 0) segments.push({ key: 'conflicts', sep: bar, keep: 95, runs: [{ text: plural(git.conflicts, 'conflict'), color: 'error', bold: true }] })
+  const counts = ([[`${sym.staged} `, git.staged, '', 'success'], [`${sym.changed} `, git.unstaged, '', 'warning'], ['? ', git.untracked ?? 0, ' new', undefined]] as const).flatMap(([mark, n, word, color]) =>
     n > 0 ? [{ text: `${mark}${n}${word}`, color: git.isStale ? undefined : color, dim: git.isStale || color === undefined }] : [],
   )
-  if (counts.length > 0) segments.push({ key: 'tree', sep: ' │ ', keep: 60, runs: between<Run>(counts, () => ({ text: '  ' })) })
+  if (counts.length > 0) segments.push({ key: 'tree', sep: bar, keep: 60, runs: between<Run>(counts, () => ({ text: '  ' })) })
   // Clean only when the status said so: an earlier one, or untracked files left out, leaves it unknown.
-  else if (git.conflicts === 0 && !git.isStale && git.untracked === 0) segments.push({ key: 'tree', sep: ' │ ', keep: 60, runs: [{ text: '✓ clean', dim: true }] })
-  if (git.stashes > 0) segments.push({ key: 'stash', sep: ' │ ', keep: 20, runs: [{ text: `≡ ${git.stashes} stash`, dim: true }] })
+  else if (git.conflicts === 0 && !git.isStale && git.untracked === 0) segments.push({ key: 'tree', sep: bar, keep: 60, runs: [{ text: sym.clean, dim: true }] })
+  if (git.stashes > 0) segments.push({ key: 'stash', sep: bar, keep: 20, runs: [{ text: `${sym.stash}${git.stashes} stash`, dim: true }] })
   return segments
 }
 
@@ -508,9 +503,9 @@ export const fileSegments = (files: readonly FileEdit[]): Segment[] => {
   if (mine.length === 0) return []
   const added = mine.reduce((n, f) => n + f.added, 0)
   const removed = mine.reduce((n, f) => n + f.removed, 0)
-  const lines: Run[] = [...(added > 0 ? [{ text: `+${added}`, color: 'success' }] : []), ...(removed > 0 ? [{ text: `−${removed}`, color: 'error' }] : [])]
+  const lines: Run[] = [...(added > 0 ? [{ text: `+${added}`, color: 'success' }] : []), ...(removed > 0 ? [{ text: `${sym.minus}${removed}`, color: 'error' }] : [])]
   return [
-    { key: 'files', sep: ' │ ', keep: 55, runs: [{ text: `✎ ${mine.length} ${mine.length === 1 ? 'file' : 'files'}` }] },
+    { key: 'files', sep: ` ${sym.bar} `, keep: 55, runs: [{ text: `${sym.edited} ${mine.length} ${mine.length === 1 ? 'file' : 'files'}` }] },
     ...(lines.length > 0 ? [{ key: 'lines', sep: ' ', keep: 25, runs: between<Run>(lines, () => ({ text: ' ' })) }] : []),
   ]
 }
@@ -523,10 +518,10 @@ export const testSegment = (run: TestRun, editedAt: number, now: number): Segmen
   const was = run.failed > 0 && run.was && run.was.failed !== run.failed ? `was ${run.was.failed}, ` : ''
   return {
     key: 'tests',
-    sep: ' │ ',
+    sep: ` ${sym.bar} `,
     keep: 85,
     runs: [
-      { text: run.failed > 0 ? `✗ ${run.failed} failed` : `✓ ${run.passed} passed`, color, dim: color === undefined },
+      { text: run.failed > 0 ? `${sym.fail} ${run.failed} failed` : `${sym.pass} ${run.passed} passed`, color, dim: color === undefined },
       { text: ` (${was}${duration(now - run.at)} ago`, dim: true },
       ...(isStale ? [{ text: ', stale', color: 'warning' }] : []),
       { text: ')', dim: true },
@@ -542,11 +537,11 @@ export const prSegment = (pr: Pr): Segment => {
     !c || !isOpen
       ? []
       : c.failed > 0
-        ? [{ text: ` ✗${c.failed}`, color: 'error' }]
+        ? [{ text: ` ${sym.fail}${c.failed}`, color: 'error' }]
         : c.pending > 0
-          ? [{ text: ` ◌${c.pending}`, dim: true }]
+          ? [{ text: ` ${sym.pending}${c.pending}`, dim: true }]
           : c.passed > 0
-            ? [{ text: ' ✓', color: 'success' }]
+            ? [{ text: ` ${sym.pass}`, color: 'success' }]
             : []
   const state: Run[] =
     pr.state === 'merged' ? [{ text: ' merged', color: 'merged' }] : pr.state === 'closed' ? [{ text: ' closed', dim: true }] : pr.state === 'draft' ? [{ text: ' draft', dim: true }] : []
@@ -557,7 +552,7 @@ export const prSegment = (pr: Pr): Segment => {
       : pr.review === 'changes'
         ? [{ text: ' changes requested', color: 'warning' }]
         : []
-  return { key: 'pr', sep: ' │ ', keep: 70, runs: [{ text: `PR #${pr.number}`, color: 'suggestion', href: linkOf(pr.url) }, ...state, ...checks, ...review] }
+  return { key: 'pr', sep: ` ${sym.bar} `, keep: 70, runs: [{ text: `PR #${pr.number}`, color: 'suggestion', href: linkOf(pr.url) }, ...state, ...checks, ...review] }
 }
 
 // An address the band will open: a web page's alone, whatever a command printed.
@@ -688,7 +683,7 @@ export const filesLine = (r: FilesReport, at: string) => {
   const parts = [
     mine.length === 0
       ? 'Claude has edited no files in the project this session'
-      : `Claude edited ${plural(mine.length, 'file')} in the project this session (+${added} −${removed})${open === undefined ? '' : open === 0 ? ', all committed or reverted' : `, ${open} not yet committed`}`,
+      : `Claude edited ${plural(mine.length, 'file')} in the project this session (+${added} ${sym.minus}${removed})${open === undefined ? '' : open === 0 ? ', all committed or reverted' : `, ${open} not yet committed`}`,
     ...(others > 0 ? [`${others} outside it`] : []),
     ...(r.commits.length > 0 ? [`${plural(r.commits.length, 'commit')} made`] : []),
     ...(r.pr ? [`PR #${r.pr.number} ${r.pr.state}`] : []),
@@ -705,16 +700,16 @@ export const reportRows = (r: FilesReport): Run[][] => {
   const group = (list: FileEdit[]): Run[][] => {
     const name = (f: FileEdit) => clean(middle(shortPath(f.path, r.root, r.home), 48))
     const widthOf = (text: (f: FileEdit) => string) => Math.max(0, ...list.map(f => cells(text(f))))
-    const [names, edits, adds, dels] = [widthOf(name), widthOf(f => `×${f.edits}`), widthOf(f => `+${f.added}`), widthOf(f => `−${f.removed}`)]
+    const [names, edits, adds, dels] = [widthOf(name), widthOf(f => `${sym.times}${f.edits}`), widthOf(f => `+${f.added}`), widthOf(f => `${sym.minus}${f.removed}`)]
     const right = (text: string, width: number) => `  ${' '.repeat(width - cells(text))}${text}`
     return list.map(f => {
       const state = stateOf(r, f)
       const [word, color] = state ? STATE_WORD[state] : ['', undefined]
       return [
         { text: name(f) + ' '.repeat(names - cells(name(f))) },
-        { text: right(`×${f.edits}`, edits), dim: true },
+        { text: right(`${sym.times}${f.edits}`, edits), dim: true },
         { text: right(`+${f.added}`, adds), color: f.added > 0 ? 'success' : undefined, dim: f.added === 0 },
-        { text: right(`−${f.removed}`, dels), color: f.removed > 0 ? 'error' : undefined, dim: f.removed === 0 },
+        { text: right(`${sym.minus}${f.removed}`, dels), color: f.removed > 0 ? 'error' : undefined, dim: f.removed === 0 },
         ...(state ? [{ text: `  ${word}`, color, dim: color === undefined }] : []),
       ]
     })

@@ -14,10 +14,17 @@ export type Theme = {
   description: string
   /** A WAV file per sound event, relative to the plugin's folder. */
   sounds: Record<SoundEvent, string>
-  /** The model chip's background, and the color of the quip's `»`, hex. */
+  /** The model chip's background, and the color of the quip's `»`, hex. A safe color, as `palette`'s are. */
   accent: string
-  /** Text drawn on the accent. */
+  /** Text drawn on the accent: a safe color that reads on it at 4.5:1 or better, in 256 colors too. */
   onAccent: string
+  /**
+   * A color per pixel character. Claude Code snaps each channel to a multiple of 0x11 and paints 24-bit; a terminal
+   * without 24-bit color (an older Apple Terminal, tmux, SSH) maps that onto the xterm palette, and the two
+   * usual formulas disagree on most colors. A safe color is on the 0x11 grid and lands on the same 256-color either
+   * way: any gray is, and so is a color whose channels are each one of 00 11 33 44 77 aa cc dd ee ff, unless it is
+   * nearly gray. The tests say which of yours are not, and the nearest that is.
+   */
   palette: Record<string, number>
   /** Each mood's frames, looped; idle's first is the portrait `/awesome-hud <theme>` draws at twice the size. */
   moods: Record<Mood, Frame[]>

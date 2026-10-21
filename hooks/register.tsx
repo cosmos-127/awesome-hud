@@ -3,14 +3,15 @@ import type { BuiltinToolResults, Elements, EngineInterface, Register, Timer, To
 
 import type { Activity, AgentFailure, Commit, Compaction, Eater, FileEdit, FilesReport, Git, GitOp, Meter, Mood, Pr, TestRun, TurnNote } from '../types'
 import {
-  COMPACT_AT, CONTEXT_CRIT, CONTEXT_WARN, EFFORT_GLYPH, FETCH_STALE_MS, branchSegments, clean, clockTime, commandKey, contextAlert, costOf, duration,
-  editLines, fileSegments, filesLine, fill, fit, gaugeRuns, gitOf, gitTrouble, headOf, isHot, isTestCommand, isUnder, limitLabel, parsePr, parseStatus,
+  COMPACT_AT, CONTEXT_CRIT, CONTEXT_WARN, FETCH_STALE_MS, branchSegments, clean, clockTime, commandKey, contextAlert, costOf, duration,
+  editLines, effortMark, fileSegments, filesLine, fill, fit, gaugeRuns, gitOf, gitTrouble, headOf, isHot, isTestCommand, isUnder, limitLabel, parsePr, parseStatus,
   isMiss, partyOf, pick, planSegments, prOfOperation, prSegment, prettyModel, quotaAlert, recordEdit, reportRows, shortTool, shown, targetOf, testSegment,
-  testsOf, toMeter, treeSegments, turnsLeft,
+  testsOf, toMeter, treeSegments,
 } from './format'
 import type { GitOperation, GitStatus, Run, Segment } from './format'
 import { play } from './sound'
 import { encode, HEIGHT, WIDTH } from './sprite'
+import { asciiFace, isUnicodeTerminal, sym, useSymbols } from './symbols'
 import type { PartyCause, SoundEvent } from './theme'
 import type { Theme } from './theme'
 import { DEFAULT_THEME, THEMES } from './themes'
@@ -20,6 +21,8 @@ const mood = atom({ plugin: 'awesome-hud', key: 'mood' } as const, 'idle' as Moo
 const quip = atom({ plugin: 'awesome-hud', key: 'quip' } as const, '')
 const EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max']
 const effort = atom({ plugin: 'awesome-hud', key: 'effort' } as const, null as string | null)
+// Whether the band draws its plain-ASCII marks: the terminal's font may lack the others. Set once, at the session's start.
+const ascii = atom({ plugin: 'awesome-hud', key: 'ascii' } as const, false)
 const meter = atom({ plugin: 'awesome-hud', key: 'meter' } as const, null as Meter | null)
 const minute = atom({ plugin: 'awesome-hud', key: 'minute' } as const, 0)
 const activity = atom({ plugin: 'awesome-hud', key: 'activity' } as const, { running: [] } as Activity)
@@ -34,7 +37,6 @@ const failures = atom({ plugin: 'awesome-hud', key: 'failures' } as const, [] as
 const commits = atom({ plugin: 'awesome-hud', key: 'commits' } as const, [] as Commit[])
 const pr = atom({ plugin: 'awesome-hud', key: 'pr' } as const, null as Pr | null)
 const reports = atom({ plugin: 'awesome-hud', key: 'reports' } as const, {} as Record<string, FilesReport>)
-const contextHistory = atom({ plugin: 'awesome-hud', key: 'contextHistory' } as const, [] as number[])
 const turnNotes = atom({ plugin: 'awesome-hud', key: 'turnNotes' } as const, {} as Record<string, TurnNote>)
 
 const SLEEP_AFTER_MS = 5 * 60_000
@@ -74,14 +76,16 @@ const themeOf = (name: string): Theme => THEMES[isTheme(name) ? name : DEFAULT_T
 let theme = themeOf(DEFAULT_THEME)
 // The `flavorText` option: theme words in Claude Code's own spinner and turn line, and the party toasts.
 let isFlavored = true
-// The `sounds` option.
-let isSounding = true
+// The `sounds` option: off until the person turns it on.
+let isSounding = false
 // The `cost` option: auto, show or hide.
 let costMode = 'auto'
 // The `layout` option at `compact`: the stats alone, on two lines.
 let isCompact = false
 // The `prStatus` option: the branch's pull request from `gh pr view`, the mod's one use of the network.
 let isPrStatus = false
+// The `symbols` option: auto asks the terminal, unicode and ascii decide for it.
+let symbolMode = 'auto'
 let current: Mood = 'idle'
 let hot = false
 let isTurning = false
@@ -455,9 +459,27 @@ async function filesReport($: EngineInterface) {
   const status = at ? (await statusOf($, at, true))?.status : undefined
   const home = (await $.env.get('HOME').catch(() => undefined)) ?? (await $.env.get('USERPROFILE').catch(() => undefined)) ?? null
   const report: FilesReport = { root, home, files: list, paths: status?.paths ?? null, commits: commitsNow, pr: prNow && prNow.branch === gitNow?.branch ? prNow : null }
+  useSymbols(await read($, ascii))
   const text = filesLine(report, clockTime(now))
   await update($, reports, r => ({ ...Object.fromEntries(Object.entries(r).slice(-7)), [text]: report }))
   return { text }
+}
+
+// Whether the band draws ASCII marks: as the `symbols` option says, else as the terminal's environment does. Each name
+// is spelled in a call of its own: the host reads the names from this module, and one it did not find is refused.
+async function needsAscii($: EngineInterface) {
+  if (symbolMode === 'ascii') return true
+  if (symbolMode === 'unicode') return false
+  const [OS, TERM, TERM_PROGRAM, WT_SESSION, TERMINUS_SUBLIME, ConEmuTask, TERMINAL_EMULATOR] = await Promise.all([
+    $.env.get('OS').catch(() => undefined),
+    $.env.get('TERM').catch(() => undefined),
+    $.env.get('TERM_PROGRAM').catch(() => undefined),
+    $.env.get('WT_SESSION').catch(() => undefined),
+    $.env.get('TERMINUS_SUBLIME').catch(() => undefined),
+    $.env.get('ConEmuTask').catch(() => undefined),
+    $.env.get('TERMINAL_EMULATOR').catch(() => undefined),
+  ])
+  return !isUnicodeTerminal({ OS, TERM, TERM_PROGRAM, WT_SESSION, TERMINUS_SUBLIME, ConEmuTask, TERMINAL_EMULATOR })
 }
 
 const agentOf = (e: object) => (e as { agentId?: string }).agentId
@@ -488,8 +510,8 @@ async function band($: EngineInterface, ui: Elements['terminal'], site: Site) {
   else park()
 
   const [
-    name, m, say, meterNow, effortNow, model, cwd, now, minuteNow, act, gitNow, history, testsNow, filesNow, eaterNow, agentsNow, editedAtNow,
-    compactionNow, prNow, failuresNow,
+    name, m, say, meterNow, effortNow, model, cwd, now, minuteNow, act, gitNow, testsNow, filesNow, eaterNow, agentsNow, editedAtNow,
+    compactionNow, prNow, failuresNow, isAscii,
   ] = await Promise.all([
     read($, themeName),
     read($, mood),
@@ -502,7 +524,6 @@ async function band($: EngineInterface, ui: Elements['terminal'], site: Site) {
     read($, minute),
     read($, activity),
     read($, git),
-    read($, contextHistory),
     read($, tests),
     read($, files),
     read($, eater),
@@ -511,8 +532,10 @@ async function band($: EngineInterface, ui: Elements['terminal'], site: Site) {
     read($, compaction),
     read($, pr),
     read($, failures),
+    read($, ascii),
   ])
   theme = themeOf(name)
+  useSymbols(isAscii)
   const shownMood = shown(m, isHot(meterNow))
   if (hasCat) {
     lastBlit = cellsAt(shownMood, idx)
@@ -528,7 +551,7 @@ async function band($: EngineInterface, ui: Elements['terminal'], site: Site) {
       {fit(segments, columns).flatMap((s, i) => [
         ...(i > 0 && s.sep
           ? [
-              <Text key={`${s.key}-sep`} dimColor={!s.sep.includes('│')} color={s.sep.includes('│') ? theme.accent : undefined}>
+              <Text key={`${s.key}-sep`} dimColor={!s.sep.includes(sym.bar)} color={s.sep.includes(sym.bar) ? theme.accent : undefined}>
                 {s.sep}
               </Text>,
             ]
@@ -544,11 +567,11 @@ async function band($: EngineInterface, ui: Elements['terminal'], site: Site) {
   const needs =
     !say && (m === 'idle' || m === 'asleep')
       ? [
-          ...(testsNow && testsNow.failed > 0 ? [`✗ ${testsNow.failed} tests failed · ${duration(now - testsNow.at)} ago`] : []),
+          ...(testsNow && testsNow.failed > 0 ? [`${sym.fail} ${testsNow.failed} tests failed ${sym.dot} ${duration(now - testsNow.at)} ago`] : []),
           // A rebase or merge stopped halfway, and its conflicts.
-          ...(trouble ? [`⎇ ${trouble}`] : []),
-          ...(failed.length > 0 ? [`✗ ${failed.length === 1 ? 'agent' : `${failed.length} agents`} failed: ${failed.at(-1)!.task}`] : []),
-          ...(agentsNow.length > 0 ? [`◐ ${agentsNow.length} agent${agentsNow.length === 1 ? '' : 's'}: ${agentsNow.at(-1)}`] : []),
+          ...(trouble ? [`${sym.branch} ${trouble}`] : []),
+          ...(failed.length > 0 ? [`${sym.fail} ${failed.length === 1 ? 'agent' : `${failed.length} agents`} failed: ${failed.at(-1)!.task}`] : []),
+          ...(agentsNow.length > 0 ? [`${sym.agent} ${agentsNow.length} agent${agentsNow.length === 1 ? '' : 's'}: ${agentsNow.at(-1)}`] : []),
         ]
       : []
   const running = act.running.at(-1)
@@ -557,8 +580,8 @@ async function band($: EngineInterface, ui: Elements['terminal'], site: Site) {
   const line =
     say ||
     (shownMood === 'working' && running
-      ? fill(theme.verbs[running.name] ?? theme.verbs.default!, running.target) + (ranFor >= 60_000 ? ` · ${duration(ranFor)}` : '')
-      : needs.join(' · ') || pick(theme.quips[shownMood], minuteNow))
+      ? fill(theme.verbs[running.name] ?? theme.verbs.default!, running.target) + (ranFor >= 60_000 ? ` ${sym.dot} ${duration(ranFor)}` : '')
+      : needs.join(` ${sym.dot} `) || pick(theme.quips[shownMood], minuteNow))
   // A need is drawn plain, to stand out from the dim jokes.
   const quipLine = (
     <Text italic={needs.length === 0} dimColor={needs.length === 0}>
@@ -569,30 +592,28 @@ async function band($: EngineInterface, ui: Elements['terminal'], site: Site) {
   const pct = Math.round(meterNow?.contextPercent ?? 0)
   // Where auto-compact starts, as the context breakdown last said: null once it said auto-compact is off.
   const compactAt = compactionNow === null ? COMPACT_AT : compactionNow.at
-  const left = turnsLeft(history, meterNow?.contextPercent, compactAt ?? 100)
   // `┊` marks where auto-compact starts.
   const contextGauge = gaugeRuns('ctx', pct, contextAlert(pct), theme.accent, compactAt ?? undefined)
-  const turnsNote: Run = { text: left === null ? '' : `  ~${left} turn${left === 1 ? '' : 's'} ${compactAt === null ? 'to full' : 'left'}`, dim: true }
   // From 70% full, what takes the most of the context, as the last turn end counted it.
-  const eaterNote: Run = { text: pct >= CONTEXT_WARN && eaterNow ? ` · ${eaterNow.name} ${Math.round(eaterNow.tokens / 1_000)}k` : '', dim: true }
+  const eaterNote: Run = { text: pct >= CONTEXT_WARN && eaterNow ? ` ${sym.dot} ${eaterNow.name} ${Math.round(eaterNow.tokens / 1_000)}k` : '', dim: true }
 
   // The plan windows share a row: the first with its reset, the others beside it, each a gauge of its own once it warns.
   const limits = meterNow?.limits ?? []
   const plan = planSegments(limits, now, theme.accent)
 
-  const level = effortNow ? ` | ${EFFORT_GLYPH[effortNow] ?? ''} ${effortNow}` : ''
+  const level = effortNow ? ` | ${[effortMark(effortNow), effortNow].filter(Boolean).join(' ')}` : ''
   const chip: Segment = { key: 'chip', keep: Infinity, runs: [{ text: ` ${prettyModel(model)}${level} `, bg: theme.accent, color: theme.onAccent, bold: true }] }
   // In a linked worktree the folder is the worktree's own: the project it belongs to says more, its name after.
   const place: Segment[] = gitNow?.worktree
     ? [
         { key: 'folder', sep: ' ', keep: 80, runs: [{ text: gitNow.worktree.project }] },
-        { key: 'worktree', sep: ' ', keep: 40, runs: [{ text: `↳ ${gitNow.worktree.name}`, dim: true }] },
+        { key: 'worktree', sep: ' ', keep: 40, runs: [{ text: `${sym.worktree} ${gitNow.worktree.name}`, dim: true }] },
       ]
     : [{ key: 'folder', sep: ' ', keep: 80, runs: [{ text: cwd.split(/[\\/]/).pop() || cwd }] }]
   const cost = costOf(meterNow, costMode)
   const spent: Segment[] = [
-    { key: 'time', sep: ' · ', keep: 45, runs: [{ text: meterNow ? duration(now - meterNow.startedAt) : '0m', dim: true }] },
-    ...(cost ? [{ key: 'cost', sep: ' · ', keep: 35, runs: [{ text: cost, dim: true }] }] : []),
+    { key: 'time', sep: ` ${sym.dot} `, keep: 45, runs: [{ text: meterNow ? duration(now - meterNow.startedAt) : '0m', dim: true }] },
+    ...(cost ? [{ key: 'cost', sep: ` ${sym.dot} `, keep: 35, runs: [{ text: cost, dim: true }] }] : []),
   ]
   const branch = gitNow ? branchSegments(gitNow) : []
   // What changed: the tree, the files Claude edited, the last test run, the branch's pull request.
@@ -610,9 +631,7 @@ async function band($: EngineInterface, ui: Elements['terminal'], site: Site) {
   if (!hasCat) {
     const gauges: Run[] = [
       ...contextGauge,
-      ...(limits.length === 0
-        ? [turnsNote]
-        : limits.flatMap(l => [{ text: '  ' }, ...gaugeRuns(limitLabel(l.kind), l.percentUsed, quotaAlert(l.percentUsed), theme.accent)])),
+      ...limits.flatMap(l => [{ text: '  ' }, ...gaugeRuns(limitLabel(l.kind), l.percentUsed, quotaAlert(l.percentUsed), theme.accent)]),
     ]
     return (
       <Box flexDirection="column">
@@ -621,7 +640,7 @@ async function band($: EngineInterface, ui: Elements['terminal'], site: Site) {
         ) : (
           <Text wrap="truncate-end">
             {runsOf(ui, chip.runs, 'chip')}
-            <Text> {theme.faces[shownMood]} </Text>
+            <Text> {sym.isAscii ? asciiFace(theme.faces[shownMood]) : theme.faces[shownMood]} </Text>
             {quipLine}
           </Text>
         )}
@@ -639,13 +658,13 @@ async function band($: EngineInterface, ui: Elements['terminal'], site: Site) {
       <Box flexDirection="column" height={gitNow ? ROWS + 1 : ROWS} justifyContent="space-between">
         <Box flexDirection="column">
           {row([chip, ...place, ...spent], 'top')}
-          <Text wrap="truncate-end">{runsOf(ui, [...contextGauge, turnsNote, eaterNote], 'ctx')}</Text>
+          <Text wrap="truncate-end">{runsOf(ui, [...contextGauge, eaterNote], 'ctx')}</Text>
           {plan.length > 0 ? row(plan, 'plan') : null}
           {gitRow.length > 0 ? row(gitRow, 'repo') : null}
           {work.length > 0 ? row(work, 'work') : null}
         </Box>
         <Text wrap="truncate-end">
-          <Text color={MOOD_COLOR[shownMood] ?? theme.accent}>» </Text>
+          <Text color={MOOD_COLOR[shownMood] ?? theme.accent}>{`${sym.quip} `}</Text>
           {quipLine}
         </Text>
       </Box>
@@ -655,16 +674,21 @@ async function band($: EngineInterface, ui: Elements['terminal'], site: Site) {
 
 export const register: Register = (on, options) => {
   isFlavored = options.flavorText !== false
-  isSounding = options.sounds !== false
+  isSounding = options.sounds === true
   costMode = String(options.cost ?? 'auto')
   isCompact = options.layout === 'compact'
   isPrStatus = options.prStatus === true
+  symbolMode = String(options.symbols ?? 'auto')
+  // A fresh load draws the Unicode marks until session.start has asked the terminal.
+  useSymbols(false)
 
   on('session.start', async ($, e, next) => {
     // The theme lives in /config: a change there reloads the mod, and this runs again with it.
     const configured = String(options.theme ?? DEFAULT_THEME)
     await update($, themeName, () => configured)
     theme = themeOf(configured)
+    const isAscii = await needsAscii($)
+    await update($, ascii, () => isAscii)
 
     // A usage that fails to read leaves the meter for session.measure: the rest of the setup must still run.
     const usage = await $.session.usage().catch(() => undefined)
@@ -744,7 +768,6 @@ export const register: Register = (on, options) => {
       await Promise.all([
         update($, meter, m => (m ? { ...m, startedAt: now } : m)),
         update($, eater, () => null),
-        update($, contextHistory, () => []),
         update($, turnNotes, () => ({})),
         update($, activity, () => ({ running: [] })),
         update($, files, () => []),
@@ -869,10 +892,7 @@ export const register: Register = (on, options) => {
       const m = await read($, meter)
       const note: TurnNote = { errors: turnErrors, isParty: turnParty }
       // Keyed `d<ms>`: a bare number key would sort by size, and the trim would keep the longest turns, not the latest.
-      await Promise.all([
-        update($, turnNotes, notes => ({ ...Object.fromEntries(Object.entries(notes).slice(-4)), [`d${e.durationMs}`]: note })),
-        update($, contextHistory, h => (m?.contextPercent === undefined ? h : [...h, m.contextPercent].slice(-10))),
-      ])
+      await update($, turnNotes, notes => ({ ...Object.fromEntries(Object.entries(notes).slice(-4)), [`d${e.durationMs}`]: note }))
       // A party already played its sound; an interruption is the person's own doing and plays none.
       if (e.reason === 'answer' && !turnParty && e.durationMs >= LONG_TURN_MS) sound($, 'done')
       else if ((e.reason === 'error' || e.reason === 'refusal') && turnErrors === 0) sound($, 'error')
@@ -913,6 +933,7 @@ export const register: Register = (on, options) => {
     if (name === 'files') {
       const report = (await read($, reports))[e.props.text]
       if (report === undefined) return next(e)
+      useSymbols(await read($, ascii))
       return (
         <Box flexDirection="column">
           {await next(e)}

@@ -86,6 +86,8 @@ declare module 'claude-code' {
       mood: Mood
       quip: string
       effort: string | null
+      /** Whether the band draws its plain-ASCII marks, for a terminal whose font may lack the others. */
+      ascii: boolean
       meter: Meter | null
       minute: number
       activity: Activity
@@ -107,8 +109,6 @@ declare module 'claude-code' {
       pr: Pr | null
       /** The last few `/awesome-hud files` reports, by the line each printed. */
       reports: Record<string, FilesReport>
-      /** Context percent at the end of each recent turn, oldest first. */
-      contextHistory: number[]
       /** The last few turns' notes, by `d` and the turn's duration in ms. */
       turnNotes: Record<string, TurnNote>
     }

@@ -1,7 +1,7 @@
 {
   "name": "awesome-hud",
   "version": "0.3.0",
-  "description": "Animated pixel mascots under the prompt that react to what Claude is doing, with themed sounds and a compact status bar",
+  "description": "Animated pixel mascots under the prompt that react to what Claude is doing, with optional themed sounds and a compact status bar",
   "author": {
     "name": "cosmos-127",
     "url": "https://github.com/cosmos-127"
@@ -33,11 +33,18 @@
       "default": "full",
       "options": ["full", "compact"]
     },
+    "symbols": {
+      "type": "string",
+      "title": "Symbols",
+      "description": "auto draws the band's marks (⎇ ✓ ✗ ↑ ↓ and the like) where the terminal's font has them, and plain ASCII where it may not, as in a bare Windows PowerShell window or the Linux console. unicode or ascii decides for you, if auto guesses wrong.",
+      "default": "auto",
+      "options": ["auto", "unicode", "ascii"]
+    },
     "sounds": {
       "type": "boolean",
       "title": "Sounds",
-      "description": "A short theme sound when Claude finishes a turn of 30 seconds or more, hits an error, needs your OK, or a party starts. macOS plays it through Claude Code; Linux needs pw-play, paplay or aplay.",
-      "default": true
+      "description": "Off until you turn it on. Then a short theme sound plays when Claude finishes a turn of 30 seconds or more, hits an error, needs your OK, or a party starts. macOS plays it through Claude Code, Windows through PowerShell; Linux needs pw-play, paplay or aplay.",
+      "default": false
     },
     "cost": {
       "type": "string",
