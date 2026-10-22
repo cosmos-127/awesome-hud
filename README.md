@@ -22,6 +22,17 @@ claude plugin install awesome-hud --marketplace cosmos-127/awesome-hud
 
 Start a new session, or run `/reload-plugins` in an open one. The HUD appears below the prompt. It runs in terminal sessions, not in the Claude Code desktop app. The plugin uses Claude Code's early-access mods API, which may change.
 
+## Update
+
+Claude Code does not update third-party marketplaces on its own unless you turn on auto-update for this one in the Marketplaces tab of `/plugin`. To update by hand:
+
+```sh
+claude plugin marketplace update awesome-hud
+claude plugin update awesome-hud@awesome-hud
+```
+
+Then restart Claude Code, or run `/reload-plugins` in an open session. You do not need to uninstall first.
+
 ## Usage
 
 Nothing needs starting: once the plugin is loaded, the mascot and status bar sit under the prompt and follow the session.
@@ -118,7 +129,7 @@ Configure the HUD in `/config`.
 
 ## Troubleshooting
 
-- **No HUD.** Run `/plugin`: a dim line under the tabs counts the active mods (`1 mod active`). Mods need a terminal session and Claude Code 2.1.287 or later (awesome-hud is tested on 2.1.306), and are off under `--safe-mode`.
+- **No HUD.** Run `/plugin`: a dim line under the tabs counts the active mods (`1 mod active`). Mods need a terminal session and Claude Code 2.1.287 or later (awesome-hud is tested on 2.1.308), and are off under `--safe-mode`.
 - **The mascot is missing and the HUD has two lines.** The terminal is narrower than 70 columns, or shorter than 25 rows with the HUD below the prompt, or **Layout** is `compact`.
 - **Boxes or blanks where the marks should be.** Set **Symbols** to `ascii`.
 - **No Git row.** The folder is not a Git repository. Pull request checks need **PR status** on and `gh` signed in.
@@ -142,7 +153,7 @@ A mod runs inside Claude Code with your permissions and is not sandboxed. awesom
 
 | It | Details |
 | --- | --- |
-| Runs programs, never through a shell | `git rev-parse`, `git status`, and `git rev-list` in the session's repository, on a timer and after edits, git commands, prompts, and turns. `tail -c` on a test run's saved output, when it is over 1 MiB. With **Sounds** on: Claude Code's own audio on macOS, `pw-play`, `paplay`, or `aplay` on Linux, and `powershell` on Windows (given the WAV file's path in an environment variable of its own), each playing a WAV file from this plugin; `uname -s` and a player's `--version` run once, to choose one. With **PR status** on, `gh pr view`. |
+| Runs programs, never through a shell | `git rev-parse`, `git status`, and `git rev-list` in the session's repository, on a timer (paused after 30 minutes without a prompt or a tool call) and after edits, git commands, prompts, and turns. `tail -c` on a test run's saved output, when it is over 1 MiB. With **Sounds** on: Claude Code's own audio on macOS, `pw-play`, `paplay`, or `aplay` on Linux, and `powershell` on Windows (given the WAV file's path in an environment variable of its own), each playing a WAV file from this plugin; `uname -s` and a player's `--version` run once, to choose one. With **PR status** on, `gh pr view`. |
 | Reads | The Git directory's `HEAD`, `config`, `FETCH_HEAD`, and rebase or merge state. Claude Code's saved output of a long test run. The variables `HOME`, `USERPROFILE`, `OS`, `TERM`, `TERM_PROGRAM`, `WT_SESSION`, `TERMINUS_SUBLIME`, `ConEmuTask`, and `TERMINAL_EMULATOR`. What Claude Code reports about the session: the model, usage, context, agents, every tool call and its result (to see edits, test runs, commits, and pull requests), and each prompt, only to spot `pspsps`. |
 | Writes | One setting, `awesome-hud.theme`, when you run `/awesome-hud <theme>`. Nothing else is written, and no environment variable is set. |
 | Uses the network | Only when **PR status** is on, and only through `gh`, with your own GitHub sign-in. The mod makes no request of its own. |
@@ -162,6 +173,14 @@ python3 scripts/sounds.py          # rebuild sounds/ from the recipes in the scr
 python3 scripts/preview.py         # regenerate the preview GIFs and the website's link card (requires Bun and Pillow)
 python3 scripts/site.py            # refresh the themes in index.html, the website (requires Bun)
 ```
+
+## Changelog
+
+Release notes are on the [Releases page](https://github.com/cosmos-127/awesome-hud/releases).
+
+- **0.4.2:** Reworked the `chibi`, `duck`, `axolotl`, and `bunny` themes, and rewrote theme messages across all seven.
+- **0.4.1:** Fixed regular expressions that could stall the HUD on text a command or repository produces, and a crash on tools or files named like `constructor`. Added `SECURITY.md` and the community files. If you are on 0.4.0, update.
+- **0.4.0:** Added the `creeper`, `hamster`, `duck`, `axolotl`, and `bunny` themes, and removed `got`.
 
 ## License
 

@@ -22,7 +22,7 @@ body:
     attributes:
       label: Claude Code version
       description: Run `claude --version`.
-      placeholder: 2.1.306
+      placeholder: 2.1.308
     validations:
       required: true
   - type: input

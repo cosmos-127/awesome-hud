@@ -7,7 +7,7 @@ import {
   testSegment, testsOf, treeSegments, verbOf,
 } from './format'
 import type { Segment } from './format'
-import { HEIGHT, WIDTH } from './sprite'
+import { encode, HEIGHT, isFontBlocks, WIDTH } from './sprite'
 import { asciiFace, isUnicodeTerminal, useSymbols } from './symbols'
 import { THEMES } from './themes'
 
@@ -150,6 +150,23 @@ test('every frame of every theme is a full grid of known pixels', async () => {
       }
     }
   }
+})
+
+// Apple Terminal draws `▀` from its font, short and low in a cell the line spacing made taller, so the top pixel of a pair
+// shows as a sliver between two strips of the bottom one's color. Its `▅` leaves the cell's top for the top pixel instead.
+test("Apple Terminal's sprite is drawn with the five-eighths block, so a pair splits near the middle of the cell", async () => {
+  expect(isFontBlocks({ TERM_PROGRAM: 'Apple_Terminal' })).toBe(true)
+  expect(isFontBlocks({ TERM_PROGRAM: 'vscode' })).toBe(false)
+  expect(isFontBlocks({})).toBe(false)
+
+  const words = (cells: string) => Array.from(new Uint32Array(Uint8Array.from(atob(cells), c => c.charCodeAt(0)).buffer))
+  const DEFAULT = 0x01000000
+  const [A, B] = [0xff0000, 0x00ff00]
+  // Five cells: a pair of one color, a pair of two, nothing, a lone top, a lone bottom.
+  const px = ['aa.a.', 'ab..b']
+  const palette = { a: A, b: B }
+  expect(words(encode(px, palette))).toEqual([0x2580, A, A, 0x2580, A, B, 0x20, DEFAULT, DEFAULT, 0x2580, A, DEFAULT, 0x2584, B, DEFAULT])
+  expect(words(encode(px, palette, true))).toEqual([0x20, DEFAULT, A, 0x2585, B, A, 0x20, DEFAULT, DEFAULT, 0x2580, A, DEFAULT, 0x2585, B, DEFAULT])
 })
 
 // What a terminal makes of a color. Claude Code snaps each channel of a sprite color to a multiple of 17 and paints it
@@ -342,6 +359,35 @@ for (const [name, options, env, mark] of SYMBOL_CASES) {
   })
 }
 
+// Which block the mascot is drawn with, by the terminal's environment: Apple Terminal draws half blocks from its font.
+const BLOCK_CASES = [
+  ['Apple Terminal draws the mascot with the five-eighths block', { TERM_PROGRAM: 'Apple_Terminal' }, 0x2585, 0x2584],
+  ['VS Code draws the mascot with the half blocks it draws itself', { TERM_PROGRAM: 'vscode' }, 0x2584, 0x2585],
+  ['a terminal that names nothing draws the mascot with the half blocks', {}, 0x2584, 0x2585],
+] as const
+for (const [name, env, drawn, notDrawn] of BLOCK_CASES) {
+  test(name, async ($, on) => {
+    mock.clock(on)
+    linuxHost(on, { env })
+    bandHost(on)
+    on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200_000 }, rateLimits: [] } }))
+    on('command.register', () => ({ value: { command: 'awesome-hud' } }))
+    on('session.start', ($, e) => ({ cwd: e.cwd }))
+    try {
+      await $.session.start({ cwd: '/home/me/project', surface: 'terminal', isInteractive: true })
+      const band = await $.ui.mount(HINT)
+      const raster = await band.find({ type: 'Raster' })
+      const words = new Uint32Array(Uint8Array.from(atob(String(raster?.props.cells)), c => c.charCodeAt(0)).buffer)
+      const glyphs = new Set(Array.from({ length: words.length / 3 }, (_, i) => words[3 * i]))
+      expect(glyphs.has(drawn)).toBe(true)
+      expect(glyphs.has(notDrawn)).toBe(false)
+      await band.unmount()
+    } finally {
+      useSymbols(false)
+    }
+  })
+}
+
 test('with ASCII symbols the quip line at rest names failing tests, a rebase and the agents at work in ASCII', { options: { symbols: 'ascii' } }, async ($, on) => {
   const clock = mock.clock(on)
   const conflicts = ['u UU N... 100644 100644 100644 100644 x y z src/a.ts', 'u AA N... 100644 100644 100644 100644 x y z src/b.ts']
@@ -513,7 +559,9 @@ test('one error sound a turn, and none for a party turn, a quick turn or an inte
   on('session.cwd', () => ({ value: '/home/me/project' }))
   on('ui.toast', () => ({ value: undefined }))
   on('turn.start', ($, e) => ({ turnId: e.turnId }))
-  on('tool.check', () => ({ decision: 'ask' }))
+  // Claude Code runs the permission check as part of every tool call, so only the checks made below by name are asked.
+  let isAsking = false
+  on('tool.check', () => ({ decision: isAsking ? 'ask' : 'allow' }))
   const failed: ToolCallResult = { isError: true, result: 'Exit code 1', text: 'Exit code 1' }
   const answers: ToolCallResult[] = [failed, failed, { result: { stdout: '', stderr: '', interrupted: false }, text: ' 3 pass\n 0 fail' }, { result: {} }]
   on('tool.call', () => answers.shift()!)
@@ -539,10 +587,13 @@ test('one error sound a turn, and none for a party turn, a quick turn or an inte
   await $.turn.complete({ ...ANSWERED, turnId: 't4', reason: 'aborted', isAborted: true })
   expect(await heard()).toEqual([])
 
+  isAsking = true
   await $.tool.check({ tool: 'Bash', input: { command: 'rm -rf build' } })
+  isAsking = false
   const question = { question: 'Which?', header: 'Pick', options: [{ label: 'a', description: 'A' }, { label: 'b', description: 'B' }], multiSelect: false }
   await $.tool.call({ tool: 'AskUserQuestion', questions: [question] })
   // The question's own permission check plays no second sound.
+  isAsking = true
   await $.tool.check({ tool: 'AskUserQuestion', input: { questions: [question] } })
   expect(await heard()).toEqual(['waiting', 'waiting'])
 })
@@ -1138,6 +1189,74 @@ test('/clear starts the session clock again', async ($, on) => {
   await after.unmount()
 })
 
+// A session in /p whose git statuses are counted; the clock is the mock's.
+const countedSession = async ($: Parameters<Parameters<typeof test>[1]>[0], on: On) => {
+  const clock = mock.clock(on)
+  const { ran } = linuxHost(on, { gitDir: '/p/.git', top: '/p' })
+  bandHost(on, '/p')
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200_000 }, rateLimits: [] } }))
+  on('command.register', () => ({ value: { command: 'awesome-hud' } }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  on('agent.list', () => ({ value: [] }))
+  return {
+    clock,
+    statuses: () => ran.filter(argv => argv.includes('status')).length,
+    start: () => $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true }),
+  }
+}
+
+test('a session that starts again does not arm a second set of timers', async ($, on) => {
+  const { clock, statuses, start } = await countedSession($, on)
+  await start()
+  await clock.advance(60_000)
+  const first = statuses()
+  await start()
+  await clock.advance(60_000)
+  // The second minute has a start of its own to read git for, and the clock's reads: no more than the first had.
+  expect(statuses() - first).toBe(first)
+})
+
+test('the clock stops reading git once the person has been away half an hour, and a prompt reads it again', async ($, on) => {
+  const { clock, statuses, start } = await countedSession($, on)
+  on('prompt.submit', ($, e) => ({ text: e.text }))
+  await start()
+  await clock.advance(29 * 60_000)
+  const about = statuses()
+  expect(about).toBeGreaterThan(100)
+  await clock.advance(10 * 60_000)
+  const gone = statuses()
+  // Up to the half hour it still read; after it, nothing.
+  expect(gone).toBeGreaterThan(about)
+  await clock.advance(10 * 60_000)
+  expect(statuses()).toBe(gone)
+  await $.prompt.submit({ text: 'back', wait: false, origin: { kind: 'composer' } })
+  await clock.advance(0)
+  expect(statuses()).toBeGreaterThan(gone)
+})
+
+test('a turn starts with no tool running, even when the last was cut short in one', async ($, on) => {
+  const clock = mock.clock(on)
+  linuxHost(on)
+  bandHost(on)
+  on('turn.start', ($, e) => ({ turnId: e.turnId }))
+  // A call still out when the next turn starts, as one the person interrupted may be.
+  let settle = () => {}
+  on('tool.call', () => new Promise<ToolCallResult>(resolve => (settle = () => resolve({ result: {} }))))
+  await $.turn.start({ text: 'a', turnId: 't1' })
+  const call = $.tool.call({ tool: 'Bash', command: 'npm run build' })
+  await clock.advance(125_000)
+  const busy = await $.ui.mount(HINT)
+  expect(await busy.find({ type: 'Text', text: /^pawing at npm run build · 2m$/ })).toBeDefined()
+  await busy.unmount()
+  await $.turn.complete({ ...ANSWERED, reason: 'aborted', isAborted: true })
+  await $.turn.start({ text: 'b', turnId: 't2' })
+  const next = await $.ui.mount(HINT)
+  expect(await next.find({ type: 'Text', text: /pawing at/ })).toBeUndefined()
+  await next.unmount()
+  settle()
+  await call
+})
+
 test('a turn the person interrupted shows no error', async ($, on) => {
   const clock = mock.clock(on)
   linuxHost(on)
@@ -1724,6 +1843,9 @@ test('clean drops what is not drawn and what makes a name read as another, and k
   expect(clean('a\u001b[31mb\u009bc\u0007d')).toBe('a[31mbcd')
   // Direction overrides and isolates, and the marks and spaces that are not seen or that break a line.
   expect(clean('main\u202egpj\u2067x\u200b\u200e\u2028\ufeff')).toBe('maingpjx')
+  // Marks that draw nothing and are no space: tag characters (they can spell text nobody sees), a soft hyphen, the fillers.
+  const hidden = [0xe0041, 0xe007f, 0xad, 0x34f, 0x180e, 0x2065, 0x3164, 0xffa0, 0xfff9, 0xfffb].map(c => String.fromCodePoint(c))
+  expect(clean(`fix/${hidden.join('')}login`)).toBe('fix/login')
   // Joiners belong to some scripts and to emoji sequences.
   expect(clean('a\u200db\u200cc 👨\u200d👩\u200d👧 日本語 ñ')).toBe('a\u200db\u200cc 👨\u200d👩\u200d👧 日本語 ñ')
 })

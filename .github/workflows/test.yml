@@ -1,0 +1,60 @@
+name: test
+
+# The tests run on the Claude Code release the README and the website say the mod is tested on, so those two cannot name
+# a version nothing checked. A second run on the newest release may fail without failing the push: it says, within a
+# week, when a new Claude Code breaks the mod (as 2.1.308 broke a test), and the schedule makes it run with no push.
+on:
+  push:
+    branches: [main]
+    paths: ['hooks/**', '.claude-plugin/**', 'README.md', 'index.html', '.github/workflows/test.yml']
+  pull_request:
+    paths: ['hooks/**', '.claude-plugin/**', 'README.md', 'index.html', '.github/workflows/test.yml']
+  schedule:
+    - cron: '17 5 * * 1'
+
+permissions:
+  contents: read
+
+env:
+  # The release the README and index.html say the mod is tested on.
+  TESTED_ON: 2.1.308
+
+jobs:
+  tested-on:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Claude Code ${{ env.TESTED_ON }}
+        run: |
+          npm install --prefix "$RUNNER_TEMP/claude" "@anthropic-ai/claude-code@$TESTED_ON"
+          echo "$RUNNER_TEMP/claude/node_modules/.bin" >> "$GITHUB_PATH"
+      - run: claude --version
+      - run: claude plugin test .
+      - run: claude plugin validate --strict .
+      - name: the README and the website name that release
+        run: |
+          for f in README.md index.html; do
+            if ! grep -q "tested on $TESTED_ON" "$f"; then
+              echo "::error file=$f::$f does not say it is tested on $TESTED_ON, the release these tests ran on."
+              exit 1
+            fi
+          done
+
+  newest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Claude Code, the newest
+        run: |
+          npm install --prefix "$RUNNER_TEMP/claude" @anthropic-ai/claude-code@latest
+          echo "$RUNNER_TEMP/claude/node_modules/.bin" >> "$GITHUB_PATH"
+      - run: claude --version
+      - run: claude plugin test .
+      - run: claude plugin validate --strict .

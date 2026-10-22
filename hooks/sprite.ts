@@ -42,29 +42,32 @@ export const frame = (px: string[], ms: number): Frame => ({ px, ms })
 const DEFAULT = 0x01000000
 
 /**
- * Whether the terminal draws half blocks from its font, not itself. Apple Terminal does, and its font sets them low
- * in the line: in its screenshots `▀` starts 16% and 22% of the way down a cell (two font sizes) and `▄` ends at the foot.
+ * Whether the terminal draws half blocks from its font, not itself. Apple Terminal does, and its font sets them in the
+ * font's own box, not the cell's, which the line spacing makes taller: in its screenshots a 44px cell has `▀` at 9-26 and
+ * `▄` at 26-44, a 28px one `▀` at 4-16, so `▀` sits low and short and the cell's other color shows above and below it.
  */
 export const isFontBlocks = (env: { TERM_PROGRAM?: string }): boolean => env.TERM_PROGRAM === 'Apple_Terminal'
 
 // One frame as Raster cells: `▀` with the top pixel as foreground and the
 // bottom pixel as background, `▄` where only the bottom one is painted.
-// With `isLow`, for a font that sets its blocks low, `▄` carries the pair instead, the bottom pixel as foreground:
-// `▀` there leaves a strip of the bottom pixel's color above the top one, pixels merged into the row above, where `▄`
-// is off only in where it splits the cell. A terminal that draws blocks itself draws both alike.
+// With `isLow`, for a font that sets its blocks low, `▅` carries the pair instead, the bottom pixel as foreground and
+// the top as background. `▀` there is a sliver of the top pixel between two strips of the bottom's, pixels merged into
+// the rows around them. `▅` is five eighths of the font's box, so its top edge lands near the middle of the cell (22
+// of 44, 13 of 28) where `▄`'s lands at 26. A terminal that draws blocks itself would put `▅` at 3/8 of the cell, so it gets `▄`.
 export const encode = (px: readonly string[], palette: Readonly<Record<string, number>>, isLow = false): string => {
   const color = (p: string) => (p === '.' ? undefined : palette[p])
+  const lower = isLow ? 0x2585 : 0x2584
   const words: number[] = []
   for (let y = 0; y < px.length; y += 2) {
     for (let x = 0; x < px[y]!.length; x++) {
       const top = color(px[y]![x]!)
       const bottom = color(px[y + 1]![x]!)
       if (top === undefined && bottom === undefined) words.push(0x20, DEFAULT, DEFAULT)
-      else if (top === undefined) words.push(0x2584, bottom!, DEFAULT)
+      else if (top === undefined) words.push(lower, bottom!, DEFAULT)
       else if (bottom === undefined) words.push(0x2580, top, DEFAULT)
       else if (!isLow) words.push(0x2580, top, bottom)
       else if (top === bottom) words.push(0x20, DEFAULT, top)
-      else words.push(0x2584, bottom, top)
+      else words.push(lower, bottom, top)
     }
   }
   // toBase64 is in the runtime (ES2026), not yet in TypeScript's lib

@@ -199,8 +199,9 @@ export const contextAlert = (pct: number) => (pct >= CONTEXT_CRIT ? 'error' : pc
 export const quotaAlert = (pct: number) => (pct >= QUOTA_CRIT ? 'error' : pct >= QUOTA_WARN ? 'warning' : undefined)
 
 // Tool names and targets come from the model and MCP servers, branch names and paths from repositories: strip control
-// characters, and the marks that draw nothing or turn the text round, so a name cannot read as another (`main` and U+202E).
-export const clean = (text: string) => text.replace(/[\u0000-\u001f\u007f-\u009f\u061c\u200b\u200e\u200f\u2028-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/g, '')
+// characters, and the marks that draw nothing (zero-width, filler and tag characters) or turn the text round, so a name
+// cannot read as another (`main` and U+202E). The joiners U+200C and U+200D stay: some scripts and emoji need them.
+export const clean = (text: string) => text.replace(/[\u0000-\u001f\u007f-\u009f\u00ad\u034f\u061c\u180e\u200b\u200e\u200f\u2028-\u202e\u2060-\u2069\u3164\ufeff\uffa0\ufff9-\ufffb\u{e0000}-\u{e007f}]/gu, '')
 
 export const targetOf = (input: Record<string, unknown>) => {
   const raw = input.file_path ?? input.path ?? input.pattern ?? input.command ?? input.url

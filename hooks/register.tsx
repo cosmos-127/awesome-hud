@@ -61,7 +61,8 @@ const EDIT_PAUSE_MS = 1_500
 const GIT_EVERY_MS = 15_000
 // With PR status on, checks move on GitHub's side: they are read again this many minutes apart while the person is about.
 const PR_EVERY_MINUTES = 5
-const PR_AWAY_MS = 30 * 60_000
+// The person has done nothing for this long: the clock stops reading git and GitHub, and their next prompt reads git again.
+const AWAY_MS = 30 * 60_000
 // An agent's end may land after its last turn's: while any is listed at work, the list is read again this often.
 const AGENTS_EVERY_MS = 15_000
 // A test run's saved output past this size is read from its end alone, where the summary is.
@@ -106,6 +107,8 @@ let lastBlit: string | undefined
 let lastEffort: string | undefined
 let animation: Timer | undefined
 let revert: Timer | undefined
+// The clock's timers for the session: one that starts again (after /clear) must not arm a second set beside them.
+let timers: Timer[] = []
 // The repository of the session's directory, as last found for that directory; null outside one.
 let known: { cwd: string; repo: Repo | null } | undefined
 // A status that ran out of time is run again without untracked files, which are what make one slow.
@@ -702,24 +705,30 @@ export const register: Register = (on, options) => {
     // Where auto-compact starts, counted locally; from 70% full each turn's end counts it again.
     void refreshBreakdown($, false)
 
-    $.clock.every(60_000, async () => {
+    for (const t of timers) t.cancel()
+    timers = []
+    const every = (ms: number, tick: () => Promise<void>) => void timers.push($.clock.every(ms, tick))
+
+    every(60_000, async () => {
       await update($, minute, n => n + 1)
       const now = await $.clock.now()
       if (current === 'idle' && now - lastActive > SLEEP_AFTER_MS) await setMood($, 'asleep')
-      if (isPrStatus && now - lastActive < PR_AWAY_MS) {
+      if (isPrStatus && now - lastActive < AWAY_MS) {
         const [minutes, prNow] = await Promise.all([read($, minute), read($, pr)])
         // Checks running are read every minute: one about to pass should not wait five.
         if (minutes % PR_EVERY_MINUTES === 0 || (prNow?.checks?.pending ?? 0) > 0) void refreshPr($)
       }
     })
 
-    $.clock.every(AGENTS_EVERY_MS, async () => {
+    every(AGENTS_EVERY_MS, async () => {
       if ((await read($, agents)).length > 0) void refreshAgents($)
     })
 
-    $.clock.every(GIT_EVERY_MS, async () => {
-      // A status still running is not asked for again: a slow repository would have them queue up.
-      if (!gitRun && (await gitMoved($))) void refreshGit($)
+    every(GIT_EVERY_MS, async () => {
+      // A status still running is not asked for again: a slow repository would have them queue up. Nor is one while the
+      // person is away and no turn runs: the tree moves for no one to see, and their next prompt reads it.
+      const isAbout = isTurning || (await $.clock.now()) - lastActive < AWAY_MS
+      if (!gitRun && isAbout && (await gitMoved($))) void refreshGit($)
     })
 
     const themes = Object.keys(THEMES).join('|')
@@ -804,6 +813,8 @@ export const register: Register = (on, options) => {
       turnSeed += 1
       turnErrors = 0
       turnParty = false
+      // Nothing runs as a turn starts: a call the last one was cut short in may never have settled to take itself off.
+      await update($, activity, () => ({ running: [] }))
       await touch($)
       await setMood($, 'working')
     }
