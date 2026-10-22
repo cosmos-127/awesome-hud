@@ -1,0 +1,30 @@
+name: site
+
+# The website embeds each theme's sprites, palettes and words. scripts/site.py writes them into index.html
+# from hooks/themes, so the page cannot fall behind. This fails a change that did not run it.
+on:
+  push:
+    branches: [main]
+    paths: ['hooks/**', 'scripts/site.py', 'index.html']
+  pull_request:
+    paths: ['hooks/**', 'scripts/site.py', 'index.html']
+
+permissions:
+  contents: read
+
+jobs:
+  fresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - run: python3 scripts/site.py
+      - name: index.html matches the themes
+        run: |
+          if ! git diff --exit-code -- index.html; then
+            echo "::error file=index.html::index.html is out of date with hooks/themes. Run python3 scripts/site.py and commit the result."
+            exit 1
+          fi

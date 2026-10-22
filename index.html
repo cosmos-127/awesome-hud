@@ -1,0 +1,749 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>awesome-hud — a pixel mascot for Claude Code</title>
+<meta name="description" content="An animated pixel mascot and status bar for Claude Code. The mascot reacts to what Claude is doing; the bar shows your model, context, plan limits and Git state. Seven themes, optional sounds, no telemetry.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="website">
+<meta property="og:title" content="awesome-hud — a pixel mascot for Claude Code">
+<meta property="og:description" content="An animated pixel mascot and status bar for Claude Code. Seven themes, optional sounds, no telemetry.">
+<meta property="og:url" content="https://cosmos-127.github.io/awesome-hud/">
+<meta property="og:image" content="https://cosmos-127.github.io/awesome-hud/assets/card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A pixel cat mascot on a dark terminal screen beside the words A pixel mascot under your prompt.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://cosmos-127.github.io/awesome-hud/">
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAYAAAD0eNT6AAAQ7klEQVR42u3Wy23jQBBAQcaiWJQTc2JOPDkCB2D4c/bFFkiONK8I1N535O5+y+K79Pt4f/sE4DcXwueYAyAafA49AMLA5+ADIAh8jj4AYsDn6AMgBnyOPgBiwNEHADHg8AOAEHD4AUAIOPwAIAQcfgAQAg4/ALjEDj8AQsDn+AMgAnwOPwBCwOf4AyACfA4/AELA5/gDIAIcfwAQAQ4/AAgBxx8ARIDjDwAiwPEHABHg+AOACHD4AUAIOP4AIAIcfwAQAY4/AIgAxx8ARIAAAAAB4PgDQDsC/IAAEIsAPxwAxCLADwYAsQjwQwFAMAL8SAAQCwA/EADEIsAPAwCxCPCDAEAwAvwYABALAD8EAMQiwA8AAMEI8PgAEAsADw8AsQjw4AAQjACPDQCxAPDQABCMAI8MALEA8MAAEIwAjwsAsQDwsAAQjACPCgCxAPCgABCMAI8JALEA8JAAEIwAjwgAsQDwgAAQjACPBwACAACYPQA8HAAEI8CjAYAAAABmDwAPBgDBCPBYACAAAIDZA8BDAUAwAjwSAAgAAGD2APBAABCMAI8DAAIAABAAAMB0AeBhACAYAR4FAAQAACAAAAABAAAIAADgBQPAgwBAMAI8BgAIAABAAAAAAgAAEAAAgAAAAAQAACAAAAABAAAIAABAAAAAAgAAOC4APAQABCPAIwCAAAAABAAAIAAAAAEAAAgAAEAAAAACAAAQAACAAAAABAAAIAAAAAEAAAgAAEAAAAACAAAQAACAAAAAAcDjtvuS4LcGe8geEgAYPMAesocEgMEzeIA9ZA8JAINn8AB7yB4SAAbP4AH2kD0kAAyewQPsIXtIABg8gwfYQ/aQADB4Bg+wh+whAWDwDB5gD9lDAsDgGTzAHkIAGDyDB9hDCACDZ/DAHrKHEAAGz+CBPWQPIQAMnsEDe8geQgAYPIMH9pA9JAAweAYP7CF7SABg8Awe2EP2kADA4Bk8sIfsIQGAwQPsIXtIABg8gwfYQ/aQADB4Bg+wh+whAWDwDB5gD9lDAsDgGTzAHrKHBIDBM3iAPWQPCQCDZ/AAe8geEgAGz+AB9pA9JAAMnsED7CEEgMEzeIA9hAAweAYP7CF7iGwAjPiD/P7neut2OcMOT7yHBuyEEbvPHhIAAkAAgD0kAOwhASAABAAIAAFgDwkAASAAQAAIAHtIAAgAAQACQADYQwJAAAgAEAACQAAYPAEgAEAACAABYPAEgAAAASAABIDBEwACAASAABAABk8AGDwQAAJAABg8AWDwQAAIAAEgAASAwQMBIAAEgAAQAAYPASAABIAAEAACwOAhAASAABAAAkAACAAEgAAQAAJAAAgAAYA9JAAEgAAQAAJAAGAPCQABIAAEgAAAe0gACAABIAAEANhDAsAeEgACQACAPSQA7CEBIAAEAAgAAWAPCQABIABAAAgAe0gACAABAAJAAAgAgycABAAIAAEgAAyeABAAIAAEgAAweAJAAIAAEAACwOAJAIMHAkAACACDJwAMHggAASAABIAAMHggAASAABAAEwZAJTrgJY+xABAAAkAACAAQAAJAAAgAASAAQAAIAAEgAASAAAABIAAEgAAQAAIABIAAEAACQAAIABAAAkAACAABIABAAAgAASAABIAAAAEgAASAABAAAgAEgAAQAAJAAAgAEAACQAAIAAEgABAAAkAACAABIAAEAAJAAAgAASAABIAAQAAIAAEgAASAABAACAABIAAEgAAQAAIAASAABIAAEAACAASAABAAAkAACAAQAAJAAAgAASAAQAAIAAEgAASAAAABIAAEgAAQAAIABIAAEAACQAAIABAAAkAACAABIABAAAgAASAABIAAAAEgAASAABAAAgAEgAAQAAJAAAgAEAACQAAIAAEgAEAACAABIAAEgAAAASAABIAAEAACAAEgAASAABAAAkAAIAAEgAAQAAKA57avy+W8rbdFAAgAAYAj5W29LQJAAAgAHClv620RAAJAAOBIeVtvKwAEgAAQADhS3tbbCgABIAAEAI6UtxUAAkAACAABgCPlbf1NCwABIAAEAI6Ut0UACAABIABwpLwtAkAACAABgCPlbREAAkAACAAB4Eh5WwSAABAAAkAAOFLeFgEgAASAAHCkHClviwAQAALAUDpSjpS3RQAIAAGAI+VIeVsEgAAQADhSjpS3RQAIAAGAIyUAvC0CQAAIABwpAeBtEQACQADgSHlbb4sAEAACAEfK23pbBIAAEAA4Ut7W2woAASAABACOlLf1tgJAAAgAAYAj5W0FgAAQAAJAAOBIeVsBIAAEgAAQADhS3hYBIAAEgADAkfK2CAABIAAEAI6Ut0UACAABIAAEgCPlbREAAkAACAAB4Eh5WwSAABAAzxEAA751vydYspMxK1PNigAQAALAUhMAmBUBIAAEgACw1AQAZkUACAABIAAsNQGAWREAAkAACABLTQAIALMiAASAABAAlpoAEABmRQAIAAEgACw1ASAAzIoAEAACQABYao6mADArAkAACAABYKkhAMyKABAAAkAAWGoIALMiAASAABAAlhoCwKwIAAEgACw1Sw0BYFYEgAAQAJaapYYAMCsCQAAIAEvNUsOsmBUBIAAEgKVmqWFWzIoAEAACwFITAJgVsyIABIAAsNQEAGbFrAgAASAALDUBgFkxKwJAAAgAS00AYFYEgAAQAALAUhMAmBUBIAAEgACw1AQAZkUACAABIAAsNQEgAMyKABAAAkAAWGoCQACYFQEgAASAALDUBIAAMCsCQAAIAAFgqTmYAsCsCAABIAAEgKWGADArAkAACAABYKkhAMyKABAAAkAAWGoIALMiAASAALDULDUEgFkRAAJAAJxsxLDfbrfLCQDMilkRAAJAAFhqAgCzIgAEgAAQAJaaAMCsCAABIAAEgKUmADArAkAACAABYKkJAMyKABAAAkAAWGoCQACYFQEgAASAALDUBIAAMCsCQAAIAAFgqQkAAWBWBIAAEAACwFJDAJgVASAABIAAsNQQAGZFAAgAASAALDUEgFkRAAJAAAgASw0BYFYEgAAQAJaapYYAMCsCQAAIAEvNUkMAmBUBIAAEgKVmqWFWzIoAEAACwFKz1DArZkUACAABYKkJAMyKWREAAkAAWGoCALNiVgSAABAAlpoAwKyYFQEgAASApSYAMCsCQAAIAAFgqQkAzIoAEAACQABYagIAsyIABIAAEACWmgAQAGZFAAgAASAALDUBIADMigAQAAJAAFhqAkAAmBUBIAAEgACw1BxNAWBWBIAAEAACwFJDAJgVASAABIAAsNQQAGZFAAgAASAALDUEgFkRAAJAAFhqltqj1q3BrJgVASAABIClZqkJALNiVgSAABAAlpoAEABmxawIAAEgACw1ASAAzIpZEQACQABYagJAAJgVsyIABIAAsNQEgAAwKwJAAAgAAWCpCQABYFYEgAAQAALAUhMAAsCsCAABIAAEgKUmAASAWREAAkAACABLTQAIALMiAASAABAAlpoAEABmRQAIAAEgACw1ASAAzIoAEAACQABYagJAAJgVASAABIAAsNQEgAAwKwJAAAgAAWCpCQABYFYEgAAQAJaapSYABIBZEQACQABYapaaABAAZkUACAABYKlZagJAAJgVASAABIClZqkJALNiVgSAABAAlpoAEABmxawIAAEgACw1ASAAzIpZEQACQABYagJAAJgVsyIABIAAsNQEgAAwKwJAAAgAAWCpCQABYFYEgAAQAALAUhMAAsCsCAABIAAEgKUmAASAWREAAkAACABLTQAIALMiAASAABAAlpoAEABmRQAIAAEgACw1ASAAzIoAEAAC4B8BYHmfZ98ut6/L5Ub8P73tiUTkaQSAABAAAsCREgACQAAIAAEgAASAIyUABIAAEAACQAAIAEdKAAgAASAABIAAEACOlAAQAAJAAAgAASAAHCkBIAAEgAAQAAJAAAgAbysABIAAEAACQAAIAG8rAASAABAAAkAACABvKwAEgAAQAAJAAAgAbysABIAAEAACQAAIAG8rAASAABAAAkAACABvKwAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAsCREgACQAAIAAEgAASAIyUABIAAEAACQAAIAEdKAAgAASAABIAAEACOlAAQAAJAAAgAASAAHCkBIAAEgAAQAAJAADhSAkAACAABIAAEgAAQAN5WAAgAASAABIAAEADeVgAIAAEgAASAABAA3lYACAABIAAEgAAQAN5WAAgAASAABIAAEADeVgAIAAEgAASAABAA3lYACAABkDIkOkYsmEgAVA6j0JksAAZwjAWAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAAYAAEAACQAAIAAEgABAAAkAACAABIAAEAAJAAAgAASAABIAAQAAIAAEgAASAABAACAABIAAEgAAQAAJAACAABIAAEAACQAAIAASAABAAAkAACAABgAAQAAJAAAgAASAAEAACQAAIAAEgAAQAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAA3BwBIAAEgAAQAAJAACAABIAAEAACQAAIAASAABAAAkAACAABgAAQHQCOMQJAAAAIAAGAAAAQAAIAAQAgAAQAAgBAAAgABACAABAACABAACAAEACAAEAAIAAAAYAAQAAAAgABgAAABAACAAEACAAEAAIAEAAIAAQAIAAQAFg+gABAAAgAAAGAABAAAAIAASAAAAQAAkAAAAgAAeARBACAABAACAAAASAAEAAAAkAAIAAABIAAQAAAAgABgAAABAACAAEACAAEAAIAEAAIAAQAIAAQAAgAQAAgAAAAAQAACAAAQAAAAAIAABAAAIAAAAAEAAAIAABAAAAAAgAAEAAAgAAAAAQAACAAAAABAAAIAABAAAAAAgAAODgAfj4PAQCx4y8AAEAAAAACAAAQAACAAAAABAAAIAAAAAEAAAgAAEAAAAACAAAQAADA8QEgAgAgePwFAAAIAABAAAAAAgAAEAAAwAsHgAgAgODxFwAAIAAAAAEAAEwbACIAAILHXwAAgAAAACoBIAIAIHj8BQAACAAAoBIAIgAAgsdfAACAAAAAKgEgAgAgePwFAAAIAACgEgAiAACCx18AAEA0AEQAAASPvwAAgGgAiAAACB5/AQAA0QAQAQAQPP4CAACiASACACB4/AUAAEQDQAQAQPD4CwAAiAaACACA4PEXAQAQPf4CAACiASACACB4/EUAAESPvwAAgGgAiAAACB5/EQAA0eMvAgAgevwFAABEA0AEAEDw+IsAAIgefxEAANHjLwIAIHr8RQAARI+/AACAaACIAAAIHn8RAADR4y8CACB6/EUAAESPvxAAgOjhFwEAOP4+EQCA4y8CAMDxFwEA4PgLAQBw+EUAADj+IgAAHH8hAAAOvwgAAMdfCACAwy8CAMDxFwIA4PALAQBw+IUAAA6/TwgA4PD7hAAADr9PCADg8PvEAACOvk8MAODo+8QAAI6+TwwA4Oj7BAEADr5PGAA49D6faABwzH1//L4AMPWvA+b5yXkAAAAASUVORK5CYII=">
+<style>
+/* One shape runs this page: the square pixel of the mascot's 18 x 10 grid. It is the screen, the bullet,
+   the button, the band and the wordmark. The accent is the chosen theme's own colour, set by the script.
+   Six type sizes: 16 small, 18 body, 22 lead, 24 name, 60 heading, 112 closing. */
+:root {
+  color-scheme: light dark;
+  --bg: #f1f2f4;
+  --surface: #e3e5e9;
+  --ink: #0f1012;
+  --dim: #484c54;
+  /* The terminal fragments stay dark in both schemes, as the mascots were drawn for a dark terminal. */
+  --term: #161616;
+  --term-fg: #ebebeb;
+  --term-dim: #9a9a9a;
+  --term-step: #232323;
+  --term-step-2: #303030;
+  --foot: #0b0b0c;
+  --accent: #eeaa44;
+  --on-accent: #222222;
+  --good: #4eba65;
+  --bad: #ff6b80;
+  --warn: #ffc107;
+  --link: #b1b9f9;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace; /* taste-skill-ignore: code and terminal output only */
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --margin: clamp(16px, 2.4vw, 32px);
+  --gutter: clamp(12px, 1.6vw, 24px);
+  --lead: 20px;
+  --field-t: .45s;
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --ease-expo: cubic-bezier(.16, 1, .3, 1);
+}
+@media (min-width: 900px) {
+  :root { --lead: 22px; }
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e0f11;
+    --surface: #1d2025;
+    --ink: #eceef1;
+    --dim: #a4a8af;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: 16px; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 18px/1.55 var(--sans); }
+a { color: inherit; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+a:hover { text-decoration-thickness: 3px; }
+:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+code, pre, kbd, samp { font-family: var(--mono); font-size: 16px; }
+code { background: var(--step, var(--surface)); padding: .1em .4em; }
+button { font: inherit; color: inherit; cursor: pointer; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+.wrap { max-width: 1760px; margin: 0 auto; padding: 0 var(--margin); }
+.skip { position: absolute; left: var(--margin); top: -80px; z-index: 10; padding: 10px 16px; background: var(--ink); color: var(--bg); }
+.skip:focus { top: 12px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* The two fields that take the theme's colour: the first screen and the closing call. */
+.field { background: var(--accent); color: var(--on-accent); transition: background-color var(--field-t) ease, color var(--field-t) ease; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 20px; border: 0; border-radius: 0;
+  background: var(--ink); color: var(--bg); font-size: 16px; font-weight: 700; text-decoration: none;
+  transition: transform 140ms var(--ease-out), background-color 180ms ease;
+}
+.btn:hover { transform: translateY(-2px); text-decoration: none; }
+.btn:active { transform: translateY(1px); }
+
+/* Header */
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 28px; padding: 14px var(--margin); }
+.brand { display: inline-flex; align-items: center; gap: .5em; font-size: 22px; font-weight: 800; letter-spacing: -.03em; text-decoration: none; }
+.brand i { width: .62em; height: .62em; background: currentColor; }
+.top nav { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 26px; font-size: 16px; font-weight: 600; }
+.top nav a:not(.btn) { padding: 8px 0; text-decoration: none; }
+.top nav a:not(.btn):hover { text-decoration: underline; }
+.top .btn { min-height: 40px; }
+@media (max-width: 599px) {
+  .top nav a:not(.btn) { display: none; }
+}
+
+/* Hero: the screen is the motif, once, at the largest scale on the page. On a phone it follows the title at once. */
+.hero { display: flex; flex-direction: column; gap: 22px; padding: 8px 0 48px; }
+.hero-copy { display: contents; }
+.hero-copy > * { margin: 0 var(--margin); }
+.hero-copy > h1 { order: 1; }
+.hero-screen { order: 2; margin: 6px 0; }
+.hero-copy > .lede { order: 3; }
+.hero-copy > .cmds { order: 4; }
+.hero-copy > .facts { order: 5; }
+h1 { max-width: 11em; font-size: clamp(34px, 8.6vw, 60px); font-weight: 800; line-height: .98; letter-spacing: -.045em; text-wrap: balance; }
+.lede { max-width: 31em; font-size: var(--lead); line-height: 1.45; }
+.cmds { display: grid; gap: 14px; max-width: 40em; }
+.cmd-label { display: block; margin-bottom: 6px; font-size: 16px; font-weight: 600; }
+.cmd { display: flex; align-items: stretch; background: var(--term); color: var(--term-fg); }
+.cmd code { flex: 1; min-width: 0; padding: 13px 16px; background: none; line-height: 1.45; overflow-wrap: anywhere; }
+.cmd code::before { content: "$ "; color: var(--term-dim); }
+.cmd.in-claude code::before { content: "❯ "; } /* taste-skill-ignore: the prompt character Claude Code itself draws */
+.cmd button { flex: none; min-width: 84px; border: 0; border-radius: 0; background: var(--term-step); color: var(--term-fg); padding: 0 16px; font-size: 16px; font-weight: 700; transition: background-color 180ms ease, transform 140ms var(--ease-out); }
+.cmd button:hover { background: var(--term-step-2); }
+.cmd button:active { transform: translateY(1px); }
+.cmd :focus-visible { outline-color: var(--term-fg); outline-offset: -3px; }
+.facts { display: flex; flex-wrap: wrap; gap: 4px 22px; padding: 0; list-style: none; font-size: 16px; font-weight: 600; }
+.facts li::before, .rows li::before { content: ""; display: inline-block; width: .5em; height: .5em; margin-right: .6em; background: currentColor; vertical-align: .04em; }
+
+.hero-screen { display: grid; align-content: center; justify-items: center; gap: 20px; padding: 28px var(--margin); background: var(--term); color: var(--term-fg); }
+.hero-screen :focus-visible { outline-color: var(--term-fg); }
+.spr { display: block; width: calc(18 * var(--px)); height: calc(10 * var(--px)); image-rendering: crisp-edges; image-rendering: pixelated; }
+#hero-sprite { --px: min(4.8vw, 30px); }
+.cli { display: grid; gap: 4px; justify-items: center; margin: 0; line-height: 1.4; text-align: center; }
+.cli .prompt, .cli .quip { color: var(--term-dim); }
+.cli code, .stage-info code { padding: 0; background: none; }
+.cli b { font-weight: 700; }
+.faces { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.face { position: relative; padding: 4px 4px 9px; border: 0; border-radius: 0; background: var(--term-step); line-height: 0; transition: background-color 180ms ease, transform 140ms var(--ease-out); }
+.face .spr { --px: 2px; }
+.face:hover { background: var(--term-step-2); transform: translateY(-2px); }
+.face:active { transform: translateY(1px); }
+.face[aria-pressed="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--accent); transition: background-color var(--field-t) ease; }
+@media (min-width: 560px) {
+  .faces { gap: 6px; }
+  .face { padding: 8px 8px 13px; }
+  .face .spr { --px: 3px; }
+}
+@media (min-width: 640px) {
+  .nw { white-space: nowrap; }
+}
+@media (min-width: 960px) {
+  .hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 0; padding: 0; min-height: calc(100svh - 70px); }
+  .hero-copy { display: grid; gap: 22px; align-content: center; justify-items: start; padding: 32px 40px 56px var(--margin); }
+  .hero-copy > * { margin: 0; }
+  .hero-screen { margin: 0; gap: 24px; padding: 48px var(--margin) 48px 40px; }
+  h1 { font-size: clamp(44px, 4.2vw, 64px); }
+  #hero-sprite { --px: min(2.1vw, 40px); }
+}
+
+/* The HUD as it really looks: one full-width band that parts the two halves of the page. */
+.shot { margin: 0; padding: clamp(40px, 5vw, 72px) 0 clamp(32px, 4vw, 56px); background: var(--term); color: var(--term-fg); }
+.shot .scroll { overflow-x: auto; overscroll-behavior-x: contain; }
+.shot img { display: block; width: 100%; min-width: 640px; height: auto; }
+.shot figcaption { margin-top: 18px; max-width: 46em; font-size: 16px; color: var(--term-dim); }
+
+/* Sections */
+.sec { --step: var(--surface); padding: clamp(72px, 8.5vw, 128px) 0; background: var(--bg); }
+.sec.alt { --step: var(--bg); background: var(--surface); }
+.grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 0 var(--gutter); }
+.grid > * { grid-column: 1 / -1; min-width: 0; }
+.head { align-items: end; margin-bottom: clamp(32px, 4vw, 56px); }
+.head.top-aligned { align-items: start; }
+h2 { margin: 0; font-size: clamp(34px, 4.2vw, 64px); font-weight: 800; line-height: 1; letter-spacing: -.04em; text-wrap: balance; }
+h3 { margin: 0 0 20px; font-size: 24px; font-weight: 800; letter-spacing: -.02em; }
+.lead { margin: 0; max-width: 32em; font-size: var(--lead); line-height: 1.45; }
+.head .lead, .head .prose { margin-top: 16px; }
+.note { margin: 28px 0 0; max-width: 62ch; font-size: 16px; color: var(--dim); }
+@media (min-width: 900px) {
+  .head .lead, .head .prose { margin-top: 0; }
+  .a1-6 { grid-column: 1 / span 6; }
+  .a7-12 { grid-column: 7 / span 6; }
+  .a8-12 { grid-column: 8 / span 5; }
+}
+
+/* Themes: a list you pick from and a screen that answers. */
+.theme-list { display: grid; gap: 6px; margin: 0 0 32px; padding: 0; list-style: none; }
+.theme { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 18px; width: 100%; padding: 10px 18px 10px 10px; border: 0; border-radius: 0; background: transparent; text-align: left; transition: background-color 180ms ease, color 180ms ease; }
+.theme:hover { background: var(--step); }
+.theme[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); transition: background-color var(--field-t) ease, color var(--field-t) ease; }
+.theme .tile { display: block; padding: 8px; background: var(--term); line-height: 0; }
+.theme .spr { --px: 4px; }
+.name { display: block; font-size: 24px; font-weight: 800; letter-spacing: -.03em; line-height: 1.15; }
+.who { display: block; font-size: 16px; line-height: 1.35; }
+.def { font-size: 16px; font-weight: 700; }
+.side { display: grid; gap: 24px; align-content: start; }
+.stage { background: var(--term); color: var(--term-fg); }
+.stage-body { display: grid; gap: 20px; padding: 24px; align-items: center; }
+.stage .spr { --px: min(4.2vw, 14px); }
+.stage-screen { justify-self: center; line-height: 0; }
+.stage-info { display: grid; gap: 8px; min-width: 0; line-height: 1.45; }
+.stage-info .line { display: block; overflow-wrap: anywhere; }
+.prompt, .stage-info .k { color: var(--term-dim); }
+.chip { display: inline-block; padding: 1px 8px; background: var(--accent); color: var(--on-accent); font-weight: 700; transition: background-color var(--field-t) ease, color var(--field-t) ease; }
+.quip { color: var(--term-dim); font-style: italic; }
+.quip b { color: var(--accent); font-style: normal; }
+.stage noscript img { display: block; max-width: 100%; height: auto; }
+@media (min-width: 560px) {
+  .stage-body { grid-template-columns: auto 1fr; gap: 28px; padding: 28px; }
+  .stage .spr { --px: 12px; }
+}
+.moods { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
+.mood { display: grid; gap: 2px; align-content: start; width: 100%; height: 100%; padding: 12px 16px; border: 0; border-radius: 0; text-align: left; background: var(--step); transition: background-color 180ms ease, color 180ms ease, transform 140ms var(--ease-out); }
+.mood:hover { transform: translateY(-2px); }
+.mood:active { transform: translateY(1px); }
+.mood[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.mood .m { font-size: 18px; font-weight: 800; }
+.mood .w { font-size: 16px; line-height: 1.4; }
+.mood[aria-pressed="true"] code { background: var(--term-step-2); color: var(--term-fg); }
+@media (min-width: 900px) {
+  .side { position: sticky; top: 24px; }
+}
+
+/* The bar: the new rows as the terminal draws them, what the five rows hold, and what each mark means. */
+.band { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 28px; align-items: start; margin: 0 0 clamp(32px, 4vw, 56px); padding: clamp(20px, 2.4vw, 32px); background: var(--term); color: var(--term-fg); }
+.band .spr { --px: 12px; }
+.band pre { margin: 0; overflow-x: auto; font-size: 16px; line-height: 24px; }
+@media (max-width: 719px) {
+  .band { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .band .spr { --px: 10px; }
+  .band pre { font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+}
+@media (min-width: 1100px) {
+  .band { gap: 40px; }
+  .band .spr { --px: 14px; }
+  .band pre { font-size: 18px; line-height: 28px; }
+}
+.band .a { color: var(--accent); }
+.band .d { color: var(--term-dim); }
+.band .g { color: var(--good); }
+.band .r { color: var(--bad); }
+.band .y { color: var(--warn); }
+.band .l { color: var(--link); }
+.rows { display: grid; gap: 22px var(--gutter); margin: 0 0 clamp(40px, 5vw, 72px); padding: 0; list-style: none; line-height: 1.4; }
+.rows li::before { display: block; width: 14px; height: 14px; margin: 0 0 14px; }
+@media (min-width: 640px) {
+  .rows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1100px) {
+  .rows { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+table { width: 100%; border-collapse: collapse; line-height: 1.45; }
+th { padding: 0 24px 12px 16px; text-align: left; font-size: 16px; font-weight: 700; color: var(--dim); }
+td { padding: 15px 24px 15px 16px; vertical-align: top; }
+tbody tr:nth-child(odd) { background: var(--step); }
+td:first-child { white-space: nowrap; font-weight: 700; }
+td code { background: var(--surface); }
+.alt td code { background: var(--surface); }
+tbody tr:nth-child(odd) td code { background: var(--bg); }
+.alt tbody tr:nth-child(odd) td code { background: var(--surface); }
+.alt tbody tr:nth-child(even) td code { background: var(--bg); }
+@media (max-width: 639px) {
+  thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  tr { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; padding: 14px 12px; }
+  td, td:first-child { padding: 0; white-space: normal; }
+  td:last-child { grid-column: 1 / -1; }
+}
+
+/* Install */
+.prose p { max-width: 34em; }
+.prose p:last-child { margin-bottom: 0; }
+.use { display: grid; gap: 30px 32px; margin: 0; padding: 0; list-style: none; }
+.use li { display: grid; gap: 6px; align-content: start; }
+.use code { justify-self: start; padding: 4px 10px; font-size: 18px; font-weight: 700; }
+@media (min-width: 700px) {
+  .use { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1100px) {
+  .use { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* Privacy: a board of filled tiles; the heading tile takes the theme's colour, the last one is ink. */
+.board { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
+.tile-card { display: grid; align-content: space-between; gap: 24px; padding: 24px; background: var(--surface); }
+.tile-card p { margin: 0; font-size: var(--lead); line-height: 1.4; }
+.tile-card.head-tile { background: var(--accent); color: var(--on-accent); transition: background-color var(--field-t) ease, color var(--field-t) ease; }
+.tile-card.head-tile p { font-size: 18px; }
+.tile-card.close { background: var(--ink); color: var(--bg); align-content: end; }
+.tile-card.close p { font-size: 18px; }
+@media (min-width: 900px) {
+  .board { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tile-card { min-height: 260px; }
+  .head-tile, .tile-card.close { grid-column: span 2; }
+}
+
+/* The closing call */
+.make { padding: clamp(72px, 9vw, 140px) 0; }
+.make h2 { font-size: clamp(44px, 7.4vw, 112px); line-height: .92; }
+.make p { max-width: 30em; font-size: var(--lead); line-height: 1.45; }
+.make .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+.make code { background: rgba(0, 0, 0, .12); }
+.make .btn:focus-visible { outline-color: var(--on-accent); }
+@media (prefers-color-scheme: dark) {
+  .make code { background: rgba(0, 0, 0, .2); }
+}
+@media (min-width: 900px) {
+  .make .grid { align-items: end; }
+}
+
+/* Footer: the name comes back, built from the same square. */
+.foot { padding: clamp(48px, 6vw, 88px) 0 40px; background: var(--foot); color: #ececec; }
+.mark { display: block; width: 100%; height: auto; fill: var(--accent); transition: fill var(--field-t) ease; }
+.foot-row { display: grid; gap: 20px 40px; margin-top: clamp(32px, 4vw, 56px); }
+.foot-links { display: flex; flex-wrap: wrap; gap: 6px 28px; margin: 0; padding: 0; list-style: none; font-size: 16px; font-weight: 600; }
+.foot p { margin: 0; max-width: 48em; font-size: 16px; color: #a8a8a8; }
+@media (min-width: 900px) {
+  .foot-row { grid-template-columns: 1fr auto; align-items: end; }
+}
+
+/* Motion: the first screen rises once on load; each section's parts arrive in reading order as it scrolls in.
+   Nothing is hidden unless the script runs, and reduced motion keeps every finished state. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes rise { from { opacity: 0; transform: translateY(24px); } }
+  .hero-copy > * { animation: rise 900ms var(--ease-expo) both; animation-delay: calc(60ms + var(--i, 0) * 80ms); }
+  .hero-screen > * { animation: rise 1100ms var(--ease-expo) both; animation-delay: calc(220ms + var(--i, 0) * 90ms); }
+  .js [data-reveal] { opacity: 0; transform: translateY(26px); transition: opacity 800ms var(--ease-expo), transform 800ms var(--ease-expo); transition-delay: calc(var(--i, 0) * 70ms); }
+  .js [data-reveal].in { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition-duration: 0s !important; }
+}
+</style>
+<noscript><style>.hero-screen { display: none; } .hero { grid-template-columns: minmax(0, 1fr); }</style></noscript>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="top field" id="top">
+  <a class="brand" href="#top"><i aria-hidden="true"></i>awesome-hud</a>
+  <nav aria-label="Sections">
+    <a href="#themes">Themes</a>
+    <a href="#hud">The bar</a>
+    <a href="#install">Install</a>
+    <a href="#settings">Settings</a>
+    <a href="#privacy">Privacy</a>
+    <a class="btn" href="https://github.com/cosmos-127/awesome-hud">GitHub</a>
+  </nav>
+</header>
+
+<main id="main">
+  <div class="hero field">
+    <div class="hero-copy">
+      <h1 style="--i:0">A pixel mascot under your prompt.</h1>
+      <p class="lede" style="--i:1">It reacts to what Claude is doing: working, waiting, failing, finishing. Beside it, a status bar with your model, context, plan limits and Git state. Sounds are off until you turn them on.</p>
+      <div class="cmds" style="--i:2">
+        <div class="cmd-row">
+          <span class="cmd-label" id="l1">In a Claude Code session</span>
+          <div class="cmd in-claude" data-ui>
+            <code aria-labelledby="l1">/plugin install awesome-hud <span class="nw">--marketplace cosmos-127/awesome-hud</span></code>
+            <button type="button" data-copy="/plugin install awesome-hud --marketplace cosmos-127/awesome-hud" aria-label="Copy the in-session install command">Copy</button>
+          </div>
+        </div>
+        <div class="cmd-row">
+          <span class="cmd-label" id="l2">Or from a shell</span>
+          <div class="cmd" data-ui>
+            <code aria-labelledby="l2">claude plugin install awesome-hud <span class="nw">--marketplace cosmos-127/awesome-hud</span></code>
+            <button type="button" data-copy="claude plugin install awesome-hud --marketplace cosmos-127/awesome-hud" aria-label="Copy the shell install command">Copy</button>
+          </div>
+        </div>
+      </div>
+      <ul class="facts" style="--i:3">
+        <li>7 themes</li>
+        <li>optional sounds</li>
+        <li>no telemetry</li>
+        <li>MIT</li>
+      </ul>
+    </div>
+
+    <div class="hero-screen" data-ui>
+      <div style="--i:0"><canvas class="spr" id="hero-sprite" width="18" height="10" role="img" aria-label="The cat mascot"></canvas></div>
+      <div class="cli" style="--i:1"><code><span class="prompt">❯</span> /awesome-hud <b id="hero-theme">cat</b></code><samp class="quip">» <span id="hero-quip">loafing</span></samp></div><!-- taste-skill-ignore -->
+      <ul class="faces" aria-label="Pick a theme" style="--i:2">
+        <li><button class="face" type="button" data-theme="cat" aria-pressed="false" aria-label="cat" title="cat"><canvas class="spr" width="18" height="10" aria-hidden="true"></canvas></button></li>
+        <li><button class="face" type="button" data-theme="chibi" aria-pressed="false" aria-label="chibi" title="chibi"><canvas class="spr" width="18" height="10" aria-hidden="true"></canvas></button></li>
+        <li><button class="face" type="button" data-theme="creeper" aria-pressed="false" aria-label="creeper" title="creeper"><canvas class="spr" width="18" height="10" aria-hidden="true"></canvas></button></li>
+        <li><button class="face" type="button" data-theme="hamster" aria-pressed="false" aria-label="hamster" title="hamster"><canvas class="spr" width="18" height="10" aria-hidden="true"></canvas></button></li>
+        <li><button class="face" type="button" data-theme="duck" aria-pressed="false" aria-label="duck" title="duck"><canvas class="spr" width="18" height="10" aria-hidden="true"></canvas></button></li>
+        <li><button class="face" type="button" data-theme="axolotl" aria-pressed="false" aria-label="axolotl" title="axolotl"><canvas class="spr" width="18" height="10" aria-hidden="true"></canvas></button></li>
+        <li><button class="face" type="button" data-theme="bunny" aria-pressed="false" aria-label="bunny" title="bunny"><canvas class="spr" width="18" height="10" aria-hidden="true"></canvas></button></li>
+      </ul>
+    </div>
+  </div>
+
+  <figure class="shot">
+    <div class="wrap">
+      <div class="scroll"><img src="assets/preview.gif" width="1880" height="480" alt="The awesome-hud HUD under the Claude Code prompt: a pixel mascot beside rows for the model, context use, plan limits, Git state and the latest test run." decoding="async" loading="lazy"></div>
+      <figcaption>The HUD under the prompt, cycling through every theme. On a narrow screen, scroll it sideways.</figcaption>
+    </div>
+  </figure>
+
+  <section class="sec" id="themes" aria-labelledby="themes-h">
+    <div class="wrap">
+      <div class="grid head">
+        <h2 id="themes-h" class="a1-6" data-reveal>Seven themes</h2>
+        <p class="lead a8-12" data-reveal style="--i:1">Each has its own mascot, mood animations, spinner words and optional sounds. Pick one, then a mood to see it act.</p>
+      </div>
+
+      <div class="grid">
+        <ul class="theme-list a1-6" aria-label="Themes" data-stagger>
+          <li><button class="theme" type="button" data-theme="cat" data-sounds="Meows, hiss, 8-bit arpeggio" aria-pressed="false"><span class="tile"><canvas class="spr" width="18" height="10" aria-hidden="true"></canvas></span><span><span class="name">cat</span><span class="who">Opinionated orange tabby</span></span><span class="def">default</span></button></li>
+          <li><button class="theme" type="button" data-theme="chibi" data-sounds="Sparkle, boing, fanfare" aria-pressed="false"><span class="tile"><canvas class="spr" width="18" height="10" aria-hidden="true"></canvas></span><span><span class="name">chibi</span><span class="who">Teal-eyed character with a side ponytail</span></span><span></span></button></li>
+          <li><button class="theme" type="button" data-theme="creeper" data-sounds="Hiss, pop, blips, chime" aria-pressed="false"><span class="tile"><canvas class="spr" width="18" height="10" aria-hidden="true"></canvas></span><span><span class="name">creeper</span><span class="who">Green pixel face with square eyes and a blocky mouth</span></span><span></span></button></li>
+          <li><button class="theme" type="button" data-theme="hamster" data-sounds="Squeaks, wheel, chirps" aria-pressed="false"><span class="tile"><canvas class="spr" width="18" height="10" aria-hidden="true"></canvas></span><span><span class="name">hamster</span><span class="who">Wheel-running hamster with full cheeks</span></span><span></span></button></li>
+          <li><button class="theme" type="button" data-theme="duck" data-sounds="Squeaks, quacks, bubbles" aria-pressed="false"><span class="tile"><canvas class="spr" width="18" height="10" aria-hidden="true"></canvas></span><span><span class="name">duck</span><span class="who">Rubber duck in a rising bath</span></span><span></span></button></li>
+          <li><button class="theme" type="button" data-theme="axolotl" data-sounds="Bubbles and blips" aria-pressed="false"><span class="tile"><canvas class="spr" width="18" height="10" aria-hidden="true"></canvas></span><span><span class="name">axolotl</span><span class="who">Smiling axolotl with frilled gills</span></span><span></span></button></li>
+          <li><button class="theme" type="button" data-theme="bunny" data-sounds="Hops, thump, sniffs" aria-pressed="false"><span class="tile"><canvas class="spr" width="18" height="10" aria-hidden="true"></canvas></span><span><span class="name">bunny</span><span class="who">Pale pink bunny with expressive ears</span></span><span></span></button></li>
+        </ul>
+
+        <div class="side a7-12">
+          <div class="stage" data-ui data-reveal>
+            <div class="stage-body">
+              <div class="stage-screen"><canvas class="spr" id="stage-sprite" width="18" height="10" role="img" aria-label="The cat mascot, idle"></canvas></div>
+              <samp class="stage-info">
+                <span class="line"><span class="prompt">❯</span> /awesome-hud <span id="stage-theme">cat</span></span><!-- taste-skill-ignore -->
+                <span class="line">mood <span class="chip" id="stage-mood">idle</span></span>
+                <span class="line quip"><b>»</b> <span id="stage-quip">loafing</span></span>
+                <span class="line"><span class="k">compact layout</span> <span id="stage-face">=^.^=</span></span>
+                <span class="line"><span class="k">sounds, if on</span> <span id="stage-sounds">Meows, hiss, 8-bit arpeggio</span></span>
+              </samp>
+            </div>
+            <noscript><img src="assets/moods.gif" width="888" height="468" alt="Every theme in every mood, animated."></noscript>
+          </div>
+
+          <ul class="moods" aria-label="Moods" data-stagger>
+            <li><button class="mood" type="button" data-mood="idle" aria-pressed="true"><span class="m">idle</span><span class="w">Waiting for a prompt.</span></button></li>
+            <li><button class="mood" type="button" data-mood="working" aria-pressed="false"><span class="m">working</span><span class="w">Claude is working.</span></button></li>
+            <li><button class="mood" type="button" data-mood="waiting" aria-pressed="false"><span class="m">waiting</span><span class="w">Claude needs permission or an answer.</span></button></li>
+            <li><button class="mood" type="button" data-mood="error" aria-pressed="false"><span class="m">error</span><span class="w">A tool fails or the turn ends with an error.</span></button></li>
+            <li><button class="mood" type="button" data-mood="done" aria-pressed="false"><span class="m">done</span><span class="w">Claude finishes a turn.</span></button></li>
+            <li><button class="mood" type="button" data-mood="party" aria-pressed="false"><span class="m">party</span><span class="w">Tests pass, a commit or push completes, or you type <code>pspsps</code>.</span></button></li>
+            <li><button class="mood" type="button" data-mood="sweat" aria-pressed="false"><span class="m">sweat</span><span class="w">Context reaches 85% or a plan limit reaches 90%.</span></button></li>
+            <li><button class="mood" type="button" data-mood="asleep" aria-pressed="false"><span class="m">asleep</span><span class="w">Sleeps after five quiet minutes.</span></button></li>
+          </ul>
+        </div>
+      </div>
+      <p class="note" data-reveal>Switching themes in Claude Code briefly shows a larger version of the mascot. The <code>creeper</code> theme is fan art of a character from a video game and is not affiliated with or endorsed by Mojang or Microsoft. Artwork is drawn pixel by pixel; sounds are generated by a script in the repository.</p>
+    </div>
+  </section>
+
+  <section class="sec alt" id="hud" aria-labelledby="hud-h">
+    <div class="wrap">
+      <div class="grid head">
+        <h2 id="hud-h" class="a1-6" data-reveal>A bar that earns its rows</h2>
+        <p class="lead a8-12" data-reveal style="--i:1">Five rows beside the mascot. When space is limited, the less important details are hidden.</p>
+      </div>
+
+      <figure class="band" data-ui data-reveal>
+        <canvas class="spr" id="band-sprite" width="18" height="10" aria-hidden="true"></canvas>
+        <pre aria-label="The bar beside the mascot, in five rows. Model Opus 5.5 at high effort, project my-app, 12 minutes. Context 42%. Five-hour plan use 31%, resetting in 58 minutes at 3:20am, weekly 12%. Branch main, two commits ahead and one behind, 3 staged, 5 changed, 1 untracked, 1 stash. 4 files edited with 120 lines added and 34 removed, 24 tests passed 3 minutes ago, pull request 42 passing."><span class="chip">Opus 5.5 | ◑ high</span> my-app <span class="d">· 12m</span>
+<span class="d">ctx</span> ━━━━━━━╌╌╌╌╌╌╌╌╌ 42%
+<span class="d"> 5h</span> ━━━━━╌╌╌╌╌╌╌╌╌╌╌ 31% <span class="d">↻ in 58m · 3:20am · 7d 12%</span>
+<span class="l">⎇ main</span> <span class="d">↑2</span> <span class="y">↓1</span>       <span class="a">│</span> <span class="g">● 3</span> <span class="y">✚ 5</span> <span class="d">? 1 new</span> <span class="a">│</span> <span class="d">≡ 1 stash</span><!-- taste-skill-ignore -->
+✎ 4 files <span class="g">+120</span> <span class="r">−34</span> <span class="a">│</span> <span class="g">✓ 24 passed</span> <span class="d">(3m ago)</span> <span class="a">│</span> <span class="l">PR #42</span> <span class="g">✓</span><!-- taste-skill-ignore -->
+<span class="a">»</span> <span class="d" id="band-quip">loafing</span></pre>
+      </figure>
+
+      <ol class="rows" data-stagger>
+          <li>Model, effort, project folder, session time, and cost.</li>
+          <li>Context usage and the auto-compact threshold.</li>
+          <li>Five-hour and weekly plan usage, with the reset time.</li>
+          <li>Git state, session edits, test results, and pull request status.</li>
+          <li>A status line with the current file or command, or a notice such as failing tests or merge conflicts.</li>
+        </ol>
+
+      <table data-reveal>
+        <thead><tr><th scope="col">Part</th><th scope="col">Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>⎇ main</code></td><td>Current branch; shows rebase or merge progress when applicable.</td></tr><!-- taste-skill-ignore -->
+          <tr><td><code>↑2 ↓1</code></td><td>Commits ahead of and behind the upstream branch.</td></tr>
+          <tr><td><code>● 3  ✚ 5  ? 1 new</code></td><td>Staged, changed, and untracked files. A clean tree shows <code>✓ clean</code>; conflicts are highlighted.</td></tr><!-- taste-skill-ignore -->
+          <tr><td><code>≡ 1 stash</code></td><td>Number of Git stashes.</td></tr>
+          <tr><td><code>✎ 4 files +120 −34</code></td><td>Files Claude edited this session and lines added or removed.</td></tr><!-- taste-skill-ignore -->
+          <tr><td><code>✓ 24 passed (3m ago)</code></td><td>Latest test result and age; marked stale after a later edit.</td></tr><!-- taste-skill-ignore -->
+          <tr><td><code>PR #42</code></td><td>Pull request for this branch; checks and review appear with <strong>PR status</strong> enabled.</td></tr>
+        </tbody>
+      </table>
+      <p class="note" data-reveal>Narrow or short terminals, and <strong>Layout</strong> <code>compact</code>, show two lines without the mascot. <strong>Position</strong> <code>above</code> moves the HUD above the prompt. If a mark draws as a box, set <strong>Symbols</strong> to <code>ascii</code>.</p>
+    </div>
+  </section>
+
+  <section class="sec" id="install" aria-labelledby="install-h">
+    <div class="wrap">
+      <div class="grid head top-aligned">
+        <h2 id="install-h" class="a1-6" data-reveal>Install</h2>
+        <div class="prose a7-12" data-stagger>
+          <p>Run either command above, then start a new session, or run <code>/reload-plugins</code> in an open one. The HUD appears below the prompt.</p>
+          <p>It runs in terminal sessions, not in the Claude Code desktop app. It needs Claude Code 2.1.287 or later (it is tested on 2.1.306), and it uses Claude Code's early-access mods API, which may change.</p>
+        </div>
+      </div>
+      <h3 data-reveal>Using it</h3>
+      <ul class="use" data-stagger>
+        <li><code>/awesome-hud</code><span>Lists the themes.</span></li>
+        <li><code>/awesome-hud bunny</code><span>Switches to a theme and saves your choice.</span></li>
+        <li><code>/awesome-hud files</code><span>Shows this session's edits, Git state, commits, and pull request.</span></li>
+        <li><code>pspsps</code><span>Type it to summon the mascot. The text is still sent to Claude.</span></li>
+        <li><code>/config</code><span>Changes the settings below.</span></li>
+        <li><code>/plugin</code><span>Disable the plugin here to turn the HUD off for a while.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="sec alt" id="settings" aria-labelledby="settings-h">
+    <div class="wrap">
+      <div class="grid head">
+        <h2 id="settings-h" class="a1-6" data-reveal>Settings</h2>
+        <p class="lead a8-12" data-reveal style="--i:1">Configure the HUD in <code>/config</code>.</p>
+      </div>
+      <table data-reveal>
+        <thead><tr><th scope="col">Setting</th><th scope="col">Default</th><th scope="col">Description</th></tr></thead>
+        <tbody>
+          <tr><td>Theme</td><td><code>cat</code></td><td><code>cat</code>, <code>chibi</code>, <code>creeper</code>, <code>hamster</code>, <code>duck</code>, <code>axolotl</code>, or <code>bunny</code>.</td></tr>
+          <tr><td>Position</td><td><code>below</code></td><td>Show the HUD below or above the prompt.</td></tr>
+          <tr><td>Layout</td><td><code>full</code></td><td>Show the mascot and stats, or use <code>compact</code> for stats only.</td></tr>
+          <tr><td>Symbols</td><td><code>auto</code></td><td>Detect Unicode support, or choose <code>unicode</code> or <code>ascii</code>.</td></tr>
+          <tr><td>Sounds</td><td>off</td><td>Play theme sounds on errors, permission requests, parties, and turns that last at least 30 seconds.</td></tr>
+          <tr><td>Session cost</td><td><code>auto</code></td><td>Show cost when billed per token; hide it on Pro or Max plans.</td></tr>
+          <tr><td>Themed words</td><td>on</td><td>Use theme text in the spinner, turn summary, and event toasts.</td></tr>
+          <tr><td>PR status</td><td>off</td><td>Use <code>gh pr view</code> to show pull request checks and review. This is the only feature that uses the network.</td></tr>
+        </tbody>
+      </table>
+      <p class="note" data-reveal>Sounds play through Claude Code on macOS, through PowerShell on Windows, and on Linux through <code>pw-play</code>, <code>paplay</code>, or <code>aplay</code>.</p>
+    </div>
+  </section>
+
+  <section class="sec" id="privacy" aria-labelledby="privacy-h">
+    <div class="wrap">
+      <div class="board" data-stagger>
+        <div class="tile-card head-tile">
+          <h2 id="privacy-h">Privacy</h2>
+          <p>A mod runs inside Claude Code with your permissions and is not sandboxed. This is what awesome-hud does with that.</p>
+        </div>
+        <div class="tile-card"><p>It watches the session, draws the HUD, and plays optional sounds. It never rewrites a prompt, a tool call, or a permission decision.</p></div>
+        <div class="tile-card"><p>It sends nothing anywhere unless <strong>PR status</strong> is on, and then only through <code>gh</code>, with your own GitHub sign-in.</p></div>
+        <div class="tile-card"><p>It writes one setting, <code>awesome-hud.theme</code>, when you pick a theme. There is no telemetry.</p></div>
+        <div class="tile-card"><p>It runs <code>git</code> in your repository and, with Sounds on, a local audio player. It never uses a shell.</p></div>
+        <div class="tile-card close"><p>The full list of what it runs, reads and writes is in the <a href="https://github.com/cosmos-127/awesome-hud#security-and-privacy">README</a>. To report a vulnerability, see <a href="https://github.com/cosmos-127/awesome-hud/blob/main/SECURITY.md">SECURITY.md</a>.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="make field" id="make" aria-labelledby="make-h">
+    <div class="wrap">
+      <div class="grid">
+        <h2 id="make-h" class="a1-6" data-reveal>Make a theme</h2>
+        <div class="a7-12" data-reveal style="--i:1">
+          <p>A theme is a file in <code>hooks/themes/</code> and four WAV files. Draw an 18 × 10 sprite, define eight moods, add the words, register it, and run <code>claude plugin test .</code>.</p>
+          <div class="actions">
+            <a class="btn" href="https://github.com/cosmos-127/awesome-hud#make-a-theme">The steps, in the README</a>
+            <a class="btn" href="https://github.com/cosmos-127/awesome-hud/blob/main/CONTRIBUTING.md">What a pull request needs</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <svg class="mark" viewBox="0 0 65 7" role="img" aria-label="awesome-hud" shape-rendering="crispEdges"><path d="M1 2h3v1h-3zM4 3h1v1h-1zM1 4h4v1h-4zM0 5h1v1h-1zM4 5h1v1h-1zM1 6h4v1h-4zM6 2h1v1h-1zM10 2h1v1h-1zM6 3h1v1h-1zM10 3h1v1h-1zM6 4h1v1h-1zM8 4h1v1h-1zM10 4h1v1h-1zM6 5h1v1h-1zM8 5h1v1h-1zM10 5h1v1h-1zM7 6h1v1h-1zM9 6h1v1h-1zM13 2h3v1h-3zM12 3h1v1h-1zM16 3h1v1h-1zM12 4h5v1h-5zM12 5h1v1h-1zM13 6h4v1h-4zM19 2h4v1h-4zM18 3h1v1h-1zM19 4h3v1h-3zM22 5h1v1h-1zM18 6h4v1h-4zM25 2h3v1h-3zM24 3h1v1h-1zM28 3h1v1h-1zM24 4h1v1h-1zM28 4h1v1h-1zM24 5h1v1h-1zM28 5h1v1h-1zM25 6h3v1h-3zM30 2h2v1h-2zM33 2h1v1h-1zM30 3h1v1h-1zM32 3h1v1h-1zM34 3h1v1h-1zM30 4h1v1h-1zM32 4h1v1h-1zM34 4h1v1h-1zM30 5h1v1h-1zM32 5h1v1h-1zM34 5h1v1h-1zM30 6h1v1h-1zM32 6h1v1h-1zM34 6h1v1h-1zM37 2h3v1h-3zM36 3h1v1h-1zM40 3h1v1h-1zM36 4h5v1h-5zM36 5h1v1h-1zM37 6h4v1h-4zM43 4h3v1h-3zM48 0h1v1h-1zM48 1h1v1h-1zM48 2h1v1h-1zM50 2h2v1h-2zM48 3h2v1h-2zM52 3h1v1h-1zM48 4h1v1h-1zM52 4h1v1h-1zM48 5h1v1h-1zM52 5h1v1h-1zM48 6h1v1h-1zM52 6h1v1h-1zM54 2h1v1h-1zM58 2h1v1h-1zM54 3h1v1h-1zM58 3h1v1h-1zM54 4h1v1h-1zM58 4h1v1h-1zM54 5h1v1h-1zM57 5h2v1h-2zM55 6h2v1h-2zM58 6h1v1h-1zM64 0h1v1h-1zM64 1h1v1h-1zM61 2h2v1h-2zM64 2h1v1h-1zM60 3h1v1h-1zM63 3h2v1h-2zM60 4h1v1h-1zM64 4h1v1h-1zM60 5h1v1h-1zM63 5h2v1h-2zM61 6h2v1h-2zM64 6h1v1h-1z"/></svg>
+    <div class="foot-row">
+      <p>awesome-hud is an independent, open-source plugin for Claude Code.</p>
+      <ul class="foot-links">
+        <li><a href="https://github.com/cosmos-127/awesome-hud">GitHub</a></li>
+        <li><a href="https://github.com/cosmos-127/awesome-hud/issues">Issues</a></li>
+        <li><a href="https://github.com/cosmos-127/awesome-hud/blob/main/SECURITY.md">Security</a></li>
+        <li><a href="https://github.com/cosmos-127/awesome-hud/blob/main/LICENSE">MIT license</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<script>
+'use strict'
+// The theme data is written by scripts/site.py from the themes' own frames; do not edit it by hand.
+const THEMES = /* theme-data:start */{
+"cat":{"accent":"#eeaa44","onAccent":"#222222","palette":{"k":"#aa4400","o":"#ffaa44","d":"#dd7700","c":"#ffddaa","p":"#ff77aa","i":"#77dd44","e":"#222222","s":"#ffffff","b":"#77ccff","y":"#ffdd44","r":"#ee4444","g":"#bbbbbb","R":"#ff4444","O":"#ffaa44","Y":"#ffdd44","G":"#44dd44","B":"#44aaff","V":"#aa44ee"},"px":[".kk........kk.....kopk......kpok.kk.koppkkkkkkppokoookkoooodoodooookddk.kosiioooosiiokook.koieiooooieiokddk.koieioppoieiokook.kppocdccdcoppook...kooccddccookok.....kkkkkkkkkk.k....",".kk........kk.....kopk......kpok.kk.koppkkkkkkppokoookkoooodoodooookddk.kooooooooooookook.kooooooooooookddk.kokkkoppokkkokook.kppocdccdcoppook...kooccddccookok.....kkkkkkkkkk.k....",".kk........kk.....kopk......kpok.kk.koppkkkkkkppokoookkoooodoodooookddk.kooooooooooookook.koeeeooooeeeokddk.koieioppoieiokook.kppocdccdcoppook...kooccddccookok.....kkkkkkkkkk.k....",".kk........kk.....kopk......kpokkk..koppkkkkkkppokook.koooodoodooookddk.kooooooooooookook.koeeeooooeeeokddk.koieioppoieiokook.kppocdccdcoppook...kooccddccookok.....kkkkkkkkkk.k....",".kk........kk...R.kopk......kpok....koppkkkkkkppok....koooodoodooook....kosieoooosieok....koiieooooiieok.kk.koiiioppoiiiokoookkppocdccdcoppkddk..kooccddccookook....kkkkkkkkkk.k....",".kk........kk.....kopk......kpokR...koppkkkkkkppok....koooodoodooook....koseiooooseiok....koieiooooieiok.kk.koiiioppoiiiokoookkppocdccdcoppkddk..kooccddccookook....kkkkkkkkkk.k....",".kk........kk.....kopk......kpok....koppkkkkkkppok...Rkoooodoodooook....kosiioooosiiok....koiieooooiieok.kk.koiieoppoiieokoookkppocdccdcoppkddk..kooccddccookook....kkkkkkkkkk.k....",".kk........kk.....kopk......kpok....koppkkkkkkppok....koooodoodooook.R..kosiioooosiiok....koiiiooooiiiok.kk.koieioppoieiokoookkppocdccdcoppkddk..kooccddccookook....kkkkkkkkkk.k....",".kk........kk.....kopk......kpok....koppkkkkkkppok....koooodoodooook....kosiioooosiiokR...koiieooooiieok.kk.koiieoppoiieokoookkppocdccdcoppkddk..kooccddccookook....kkkkkkkkkk.k....",".kk........kk...R.kopk......kpok....koppkkkkkkppok....koooodoodooook....kooooooooooook....kooooooooooook.kk.kokkkoppokkkokoookkppocdccdcoppkddk..kooccddccookook....kkkkkkkkkk.k....",".kk........kk..yy.kopk......kpoky..ykoppkkkkkkppok...ykoooodoodooook..y.kosiioooosiiok..y.koieiooooieiok....koieioppoieiok..y.kppocdccdcoppk.....kooccddccook.......kkkkkkkkkk......",".kk........kk.....kopk......kpok....koppkkkkkkppok....koooodoodooook....kosiioooosiiok....koiieooooiieok....koiieoppoiieok....kppocdccdcoppk.....kooccddccook.......kkkkkkkkkk......","...............rr.kkk........kkk.rr.kppokkkkkkoppk.rr.koooodoodooook....kosssoooosssok.rr.kosesoooosesokkkk.kosssopposssokodokkppoceeeecoppkdodk.koocseescookkodok..kkkkkkkkkk.kok..","...................kkk........kkk....kppokkkkkkoppk....koooodoodooook....kosssoooosssok....kosesoooosesokkkk.kosssopposssokodo.kppoceeeecoppkdod..koocseescookkodo...kkkkkkkkkk.kok.",".kk........kk..y..kopk......kpokyyy.koppkkkkkkppok.y..koooodoodooook....kooooooooooook....kookooooookook.kk.kokokoppokokokoookkppocdccdcoppkddk..kooccddccookook....kkkkkkkkkk.k....",".kk........kk.....kopk......kpok....koppkkkkkkppok..y.koooodoodooook.yyykooooooooooook..y.kookooooookook.kk.kokokoppokokokoookkppocdccdcoppkddk..kooccdpccookook....kkkkkkkkkk.k....","Vkk........kk..kk.kopk......kpokOOOkkoppkkkkkkppokYYkYkoooodoodooookGGk.kooooooooooookBBk.kookooooookookVVk.kokokoppokokokRRk.kppocdccdcoppOOk.R.kooccdpccookYkY....kkkkkkkkkk.k....","...............Y...kk........kk..kk.kopk......kpokYYYkkoppkkkkkkppokGGk.koooodoodooookBBkYkooooooooooookVVk.kookooooookookRRk.kokokoppokokokOOk.kppocdccdcoppYYk...kooccdpccookGk..R","Vkk........kk..kk.kopk......kpokGGGkkoppkkkkkkppokBBkYkoooodoodooookVVk.kooooooooooookRRk.kookooooookookOOk.kokokoppokokokYYk.kppocdccdcoppGGk.R.kooccdpccookBkY....kkkkkkkkkk.k....","...............Y...kk........kk..kk.kopk......kpokBBBkkoppkkkkkkppokVVk.koooodoodooookRRkYkooooooooooookOOk.kookooooookookYYk.kokokoppokokokGGk.kppocdccdcoppBBk...kooccdpccookVk..R","Vkk........kk..kk.kopk......kpokVVVkkoppkkkkkkppokRRkYkoooodoodooookOOk.kooooooooooookYYk.kookooooookookGGk.kokokoppokokokBBk.kppocdccdcoppVVk.R.kooccdpccookRkY....kkkkkkkkkk.k....","...............Y...kk........kk..kk.kopk......kpokRRRkkoppkkkkkkppokOOk.koooodoodooookYYkYkooooooooooookGGk.kookooooookookBBk.kokokoppokokokVVk.kppocdccdcoppRRk...kooccdpccookOk..R",".kk........kk.b...kopk......kpobbb..koppkkkkkkppobbb..koookdoodkoookb...kosiioooosiiok....koeiiooooeiiok.kk.koeiioppoeiiokoookkppoccdcdcoppkddk..kooccccccookook....kkkkkkkkkk.k....",".kk........kk.....kopk......kpokb...koppkkkkkkppobbb..koookdoodkooobbb..kosiioooosiiokb...koiieooooiieok.kk.koiieoppoiieokoookkppoccdcdcoppkddk..kooccccccookook....kkkkkkkkkk.k....",".kk........kk.....kopk......kpok....koppkkkkkkppokb...koookdoodkooobbb..kosiioooosiiobbb..koeiiooooeiiokbkk.koeiioppoeiiokoookkppoccdcdcoppkddk..kooccccccookook....kkkkkkkkkk.k....",".kk........kk.....kopk......kpok....koppkkkkkkppok....koooodoodooook....kooooooooooook.gg.kooooooooooook..g.kokkkoppokkkok..ggkppocdccdcoppkkkkk.kooccddccookodood..kkkkkkkkkkkkkkk.","...................kk........kk.....kopk......kpok.gg.koppkkkkkkppok..g.koooodoodooook..ggkooooooooooook....kooooooooooook....kokkkoppokkkokkkkkkppocdccdcopkodood.kooccddccookkkkk.",".kk........kk.ggggkopk......kpok..g.koppkkkkkkppok.g..koooodoodooookggggkooooooooooook....kooooooooooook....kokkkoppokkkok....kppocdccdcoppkkkkk.kooccddccookodood..kkkkkkkkkkkkkkk.","...................kk........kk.....kopk......kpok....koppkkkkkkppok....koooodoodooook....kooooooooooook....kooooooooooook....kokkkoppokkkokkkkkkppocdccdcopkodood.kooccddccookkkkk."],"moods":{"idle":[[0,2400],[1,130],[0,1500],[2,700],[3,260],[2,260],[3,260],[0,2000],[1,110],[0,110],[1,110]],"working":[[4,260],[5,260],[6,260],[7,260],[8,260],[9,140]],"waiting":[[10,650],[11,300]],"error":[[12,420],[13,160]],"done":[[14,500],[15,500]],"party":[[16,140],[17,140],[18,140],[19,140],[20,140],[21,140]],"sweat":[[22,700],[23,450],[24,350]],"asleep":[[25,1100],[26,1100],[27,1100],[28,1100]]},"quips":{"idle":"loafing","working":"thinking very hard, for a cat","waiting":"needs your OK, hooman","error":"oops. knocked it off the table","done":"nailed it","party":"zoomies!","sweat":"context getting tight. if it fits, I sits?","asleep":"zzz"},"faces":{"idle":"=^.^=","working":"=•.•=","waiting":"=o.o= ?","error":"=O.O= !","done":"=^w^=","party":"=^o^= ~","sweat":"=;.;=","asleep":"=-.-= z"}},
+"chibi":{"accent":"#aa77ee","onAccent":"#000044","palette":{"k":"#4411aa","h":"#aa77ee","d":"#7744cc","H":"#ccaaff","s":"#ffddcc","S":"#ddaa77","e":"#441144","i":"#33ccdd","w":"#ffffff","p":"#ffaacc","M":"#dd4477","n":"#ff77aa","b":"#77ccff","y":"#ffdd44","Y":"#ffeeaa","r":"#ee4444","g":"#bbbbbb"},"px":[".......hh............kkhhhhkk........khHhhhhhhHhk.....khyyhhhhhhHhhnn...khhhsssssshhnnnk..khdeesssseedhkhhk.khdwisssswidhkhhk.khdiissssiidhkkhhkkhnnssMMssnnhkkhhk.khSssssssShk.kHhk",".......hh............kkhhhhkk........khHhhhhhhHhk.....khyyhhhhhhHhhnn...khhhsssssshhnnnk..khdssssssssdhkhhk.khdssssssssdhkhhk.khdeesssseedhkkhhkkhnnssMMssnnhkkhhk.khSssssssShk.kHhk","........hh...........kkhhhhkk........khHhhhhhhHhk.....khyyhhhhhhHhhnn...khhhsssssshhnnnk..khdeesssseedhkhhk.khdwisssswidhkhhk.khdiissssiidhkhhk.khnnssMMssnnhkhhk..khSssssssShk.kHhk",".......hh............kkhhhhkk........khHhhhhhhHhk.....khyyhhhhhhHhhnn...khhhsssssshhnnnk..khdeesssseedhkhhk.khdwisssswidhkhhk.khdeisssseidhkkhhkkhnnssMMssnnhkkhhk.khSssssssShk.kHhk",".......hh............kkhhhhkk........khHhhhhhhHhk.....khyyhhhhhhHhhnn...khhhsssssshhnnnk..khdeesssseedhkhhk.khdwisssswidhkhhk.khdiessssiedhkhhk.khnnssMMssnnhkhhk..khSssssssShk.kHhk",".......hh......yyy...kkhhhhkk......y.khHhhhhhhHhk...y.khyyhhhhhhHhhnn...khhhsssssshhnnnky.khdeesssseedhkhhk.khdwisssswidhkhhk.khdiessssiedhkkhhkkhnnssMMssnnhkkhhk.khSssssssShk.kHhk",".......hh............kkhhhhkk........khHhhhhhhHhk.....khyyhhhhhhHhhnn...khhhsssssshhnnnk..khdeesssseedhkhhk.khdwisssswidhkhhk.khdiessssiedhkkhhkkhnnssMMssnnhkkhhk.khSssssssShk.kHhk",".......hh.....r.r....kkhhhhkk..rr.rr.khHhbhbhbHhk.....khyyhbhbhbHhhrr.rrkhhhsssssshhnnrkr.khdeesssseedhkhhk.khdwesssswedhkhhk.khdeesssseedhkkhhkkhnnssMMssnnhkkhhk.khSssMMssShk.kHhk",".......hh............kkhhhhkk..rr.rr.khHhbhbhbHhk.....khyyhbhbhbHhhrr.rrkhhhsssssshhnnnk..khdeesssseedhkhhk.khdwesssswedhkhhk.khdeesssseedhkkhhkkhnnssMMssnnhkkhhk.khSssMMssShk.kHhk",".......hh......y.....kkhhhhkk...yYy..khHhhhhhhHhk..y..khyyhhhhhhHhhnn...khhhsssssshhnnnk..khdsessssesdhkhhk.khdesessesedhkhhk.khdssssssssdhkkhhkkhnnsMMMMsnnhkkhhk.khSssnnssShk.kHhk",".......hh............kkhhhhkk.....y..khHhhhhhhHhk..yYykhyyhhhhhhHhhnn.y.khhhsssssshhnnnk..khdsessssesdhkhhk.khdesessesedhkhhk.khdssssssssdhkhhk.khnnsMMMMsnnhkhhk..khSssnnssShk.kHhk","...YYYYhhYY........YYkkhhhhkkYY.....YkhHhhhhhhHhkYY...khyyhhhhhhHhhnnY..khhhsssssshhnnnkY.khdsessssesdhkhhkYkhdesessesedhkhhkYkhdssssssssdhkhhkYkhnnsMMMMsnnhkhhkYYkhSssnnssShkYkHhk","........yy...........yyyyyhhy........yykkhhhhkkyy.....ykhHhhhhhhHhkyy...khyyhhhhhhHhhnny..khhhsssssshhnnnky.khdsessssesdhkhhkykhdesessesedhkhhkykhdssssssssdhkkhhkkhnnsMMMMsnnhkkhhk",".......hh..b.........kkhhhhkbbb......khHhhhhhhbwb.....khyyhhhhhhHbhnn...khhhsssssshhnnnk..khdeesssseedhkhhk.khdwisssswidhkhhk.khdiissssiidhkkhhkkhnnssMsMsnnhkkhhk.khSssssssShk.kHhk",".......hh............kkhhhhkkb.......khHhhhhhhbbb.....khyyhhhhhhbwbnn...khhhsssssshbnnnk..khdeesssseedhkhhk.khdwisssswidhkhhk.khdiissssiidhkkhhkkhnnssMsMsnnhkkhhk.khSssssssShk.kHhk",".......hh............kkhhhhkkb.......khHhhhhhhbbb.....khyyhhhhhhbwbnn...khhhsssssshbnnnk..khdssssssssdhkhhk.khdssssssssdhkhhk.khdeesssseedhkkhhkkhnnssMsMsnnhkkhhk.khSssssssShk.kHhk",".......hh............kkhhhhkk........khHhhhhhhHhk.....khyyhhhhhhHhhnn...khhhsssssshhnnnk..khdssssssssdhkhhk.khdeesssseedhkhhk.khdssssbsssdhkkhhkkhnnssMMssnnhkkhhk.khSssssssShk.kHhk",".......hh......gg....kkhhhhkk.....g..khHhhhhhhHhk...ggkhyyhhhhhhHhhnn...khhhsssssshhnnnk..khdssssssssdhkhhk.khdeesssseedhkhhk.khdssssbwssdhkkhhkkhnnssMbbsnnhkkhhk.khSssssssShk.kHhk",".......hh............kkhhhhkk........khHhhhhhhHhk.....khyyhhhhhhHhhnn...khhhsssssshhnnnk..khdssssssssdhkhhk.khdeesssseedhkhhk.khdssssbwssdhkkhhkkhnnssMbbsnnhkkhhk.khSssssssShk.kHhk",".......hh......gg....kkhhhhkk.....g..khHhhhhhhHhk...ggkhyyhhhhhhHhhnn...khhhsssssshhnnnk..khdssssssssdhkhhk.khdeesssseedhkhhk.khdsssswsssdhkkhhkkhnnssMMwsnnhkkhhk.khSssssssShk.kHhk"],"moods":{"idle":[[0,2600],[1,130],[0,1600],[2,300],[0,300],[2,300],[0,2200],[1,110],[0,110],[1,110]],"working":[[3,520],[4,520],[3,520],[4,520],[1,140]],"waiting":[[5,650],[6,300]],"error":[[7,420],[8,160]],"done":[[9,500],[10,500]],"party":[[11,140],[12,140],[11,140],[12,140]],"sweat":[[13,700],[14,450],[15,350]],"asleep":[[16,900],[17,900],[18,700],[19,300]]},"quips":{"idle":"ready when you are, senpai","working":"power of friendship loading","waiting":"senpai, please notice me","error":"nani?!","done":"it is done, as foretold","party":"bankai!","sweat":"context is almost out of episodes","asleep":"zzz... five more minutes"},"faces":{"idle":"(•ᴗ•)","working":"(òᴗó)و","waiting":"(•ᴗ•)? ","error":"(°□°)!","done":"(^ᴗ^)","party":"(≧▽≦)~","sweat":"(ó_ò;)","asleep":"(-ᴗ-) z"}},
+"creeper":{"accent":"#77aa44","onAccent":"#111111","palette":{"k":"#333333","g":"#77aa77","G":"#aacc77","d":"#44aa44","n":"#111111","c":"#44aaff","r":"#ff4444","y":"#ffdd44"},"px":[".kGggGGggGgGk......kggGgGGgGggk......knnnggGgnnnk..k...knnnGgGgnnnk.kgk..kgGgnnnnGgGk.knk..kGnnnnnnnngk..k...kgnnnnnnnngk......kGnnGggGnnGk......kgnnGGgGnnGk......kGnnGgGGnnGk.....",".kGggGGggGgGk......kggGgGGgGggk......kgggggGggggk..k...kgggGgGggggk.kgk..kgGgnnnnGgGk.knk..kGnnnnnnnngk..k...kgnnnnnnnngk......kGnnGggGnnGk......kgnnGGgGnnGk......kGnnGgGGnnGk.....",".kGggGGggGgGk......kggGgGGgGggk......kdnnggGgdnnk......kdnnGgGgdnnk......kgGgnnnnGgGk......kGnnnnnnnngk......kgnnnnnnnngk......kGnnGggGnnGk......kgnnGGgGnnGk......kGnnGgGGnnGk.....",".kGggGGggGgGk......kggGgGGgGggk......knnnggGgnnnk......knnnGgGgnnnk......kgGgnnnnGgGk......kGnnnnnnnngk......kgnnnnnnnngk......kGnnGggGnnGk......kgnnGGgGnnGk......kGnnGgGGnnGk.....",".kGggGGggGgGk......kggGgGGgGggk......kgggggGggggk......kgggGgGggggk......kgGgnnnnGgGk......kGnnnnnnnngk......kgnnnnnnnngk......kGnnGggGnnGk......kgnnGGgGnnGk......kGnnGgGGnnGk.....",".kGggGGggGgGk..yy..kggGgGGgGggk.y..y.knnnggGgnnnk....y.knnnGgGgnnnk...y..kgGgnnnnGgGk...y..kGnnnnnnnngk......kgnnnnnnnngk...y..kGnnGggGnnGk......kgnnGGgGnnGk......kGnnGgGGnnGk.....",".kGggGGggGgGk......kggGgGGgGggk......knndggGgnndk......knndGgGgnndk......kgGgnnnnGgGk......kGnnnnnnnngk......kgnnnnnnnngk......kGnnGggGnnGk......kgnnGGgGnnGk......kGnnGgGGnnGk.....",".kGggGGggGgGk......kggGgGGgGggk..rr..knnnngGgnnnn..rr..knnnngGgnnnn..rr..kgGgnnnnGgGk..rr..kGnnnnnnnngk......kgnnnnnnnngk..rr..kGnnnnnnnnGk......kgnnnnnnnnGk......kGnnnnnnnnGk.....",".kGggGGggGgGk......kggGgGGgGggk......knnnngGgnnnn......knnnngGgnnnn......kgGgnnnnGgGk......kGnnnnnnnngk......kgnnnnnnnngk......kGnnnnnnnnGk......kgnnnnnnnnGk......kGnnnnnnnnGk.....",".kGggGGggGgGk...y..kggGgGGgGggk..yyy.kGGGggGgGGGk...y..kgggGgGggggk......kgGgnnnnGgGk......kGnnnnnnnngk......kgnnnnnnnngk......kGnnGggGnnGk......kgnnGGgGnnGk......kGnnGgGGnnGk.....",".kGggGGggGgGk......kggGgGGgGggk......kGGGggGgGGGk......kgggGgGggggk......kgGgnnnnGgGk......kGnnnnnnnngk..y...kgnnnnnnnngk.yyy..kGnnGggGnnGk..y...kgnnGGgGnnGk......kGnnGgGGnnGk.....",".kGggGGggGgGk......kggGgGGgGggk......kGGGggGgGGGk..y...kgggGgGggggk.yyy..kgGgnnnnGgGk.kyk..kGnnnnnnnngk..k...kgnnnnnnnngk......kGnnGggGnnGk......kgnnGGgGnnGk......kGnnGgGGnnGk.....","...................kGggGGggGgGk......kggGgGGgGggk..y...kGGGggGgGGGk.yyy..kgggGgGggggk.kyk..kgGgnnnnGgGk.knk..kGnnnnnnnngk..k...kgnnnnnnnngk......kGnnGggGnnGk......kgnnGGgGnnGk.....",".kGggGGggGgGk..c...kggGgGGgGggk.ccc..kdnnggGgdnnk..c...kdnnGgGgdnnk......kgGgnnnnGgGk......kGnnnnnnnngk......kgnnnnnnnngk......kGnnGggGnnGk......kgnnGGgGnnGk......kGnnGgGGnnGk.....",".kGggGGggGgGk......kggGgGGgGggk..c...kdnnggGgdnnk.ccc..kdnnGgGgdnnk..c...kgGgnnnnGgGk......kGnnnnnnnngk......kgnnnnnnnngk......kGnnGggGnnGk......kgnnGGgGnnGk......kGnnGgGGnnGk.....",".kGggGGggGgGk......kggGgGGgGggk......kdnnggGgdnnk..c...kdnnGgGgdnnk.ccc..kgGgnnnnGgGk..c...kGnnnnnnnngk......kgnnnnnnnngk......kGnnGggGnnGk......kgnnGGgGnnGk......kGnnGgGGnnGk.....",".kGggGGggGgGk......kggGgGGgGggk......kgggggGggggk......kgggGgGggggk......kgGgnnnnGgGk..gg..kGnnnnnnnngk...g..kgnnnnnnnngk...gg.kGnnGggGnnGk......kgnnGGgGnnGk......kGnnGgGGnnGk.....",".kGggGGggGgGk......kggGgGGgGggk......kgggggGggggk..gg..kgggGgGggggk...g..kgGgnnnnGgGk...gg.kGnnnnnnnngk......kgnnnnnnnngk......kGnnGggGnnGk......kgnnGGgGnnGk......kGnnGgGGnnGk....."],"moods":{"idle":[[0,1800],[1,140],[0,900]],"working":[[2,520],[3,520],[2,520],[4,140]],"waiting":[[5,650],[6,300]],"error":[[7,420],[8,160]],"done":[[9,500],[10,500]],"party":[[11,140],[12,140],[11,140],[12,140]],"sweat":[[13,700],[14,450],[15,350]],"asleep":[[16,1100],[17,1100],[4,1100]]},"quips":{"idle":"quietly guarding your blocks","working":"building the next block","waiting":"your turn to place a block","error":"that block did not place right","done":"build complete","party":"a tiny block party!","sweat":"context is getting explosive","asleep":"sleeping in a dirt hut"},"faces":{"idle":"[|*|]","working":"[*>*]","waiting":"[|*|]?","error":"[x_x]!","done":"[^_^]","party":"[^o^]~","sweat":"[;_;]","asleep":"[-_-] z"}},
+"hamster":{"accent":"#aa7744","onAccent":"#111111","palette":{"k":"#aa7744","t":"#ddaa77","c":"#ffddaa","w":"#ffffff","p":"#ff77aa","P":"#ffaacc","e":"#222222","s":"#ffffff","h":"#77aadd","j":"#aaccee","H":"#ffdd44","y":"#ffdd44","r":"#ee4444","g":"#aaaaaa","b":"#77ccff"},"px":["..kk......kk.......kPPk....kPPk......kPPkkkkkkPPk......kttttttttttk.....kttttttttttttk....kccseccccsecck.Hh.kcceecccceecckhj.hkppcccppcccppkhjjh.kccckwwkccck.h.jh..kkkkkkkkkk...hh.","..kk......kk.......kPPk....kPPk......kPPkkkkkkPPk......kttttttttttk.....kttttttttttttk....kcccccccccccck.Hh.kcckkcccckkcckhj.hkppcccppcccppkhjjh.kccckwwkccck.h.jh..kkkkkkkkkk...hh.","..kk......kk.......kPPk....kPPk......kPPkkkkkkPPk......kttttttttttk.....kttttttttttttk....kccseccccsecck.Hh.kcceecccceecckhj.hkppcccppcccppkhjjh.kccckeekccck.h.jh..kkkkkkkkkk...hh.","...kk......kk.......kPPk....kPPk......kPPkkkkkkPPk......kttttttttttk.....kttttttttttttk....kccesccccescckhH..kcceecccceecch.jh.kppcccppcccpphjjh..kccckwwkccckhj.h...kkkkkkkkkk..hh.",".....................kk......kk.......kPPk....kPPk......kPPkkkkkkPPk......kttttttttttk.....kttttttttttttkhh..kccesccccescchj.H.kcceecccceecchjjh.kppcccppcccpph.jh..kccckwwkccck.hh.","..kk......kk.......kPPk....kPPk......kPPkkkkkkPPk......kttttttttttk.....kttttttttttttk....kccseccccsecck.hh.kcceecccceecckh.jhkppcccppcccppkhjjH.kccckwwkccck.hj.h..kkkkkkkkkk...hh.","....................kk......kk.......kPPk....kPPk......kPPkkkkkkPPk......kttttttttttk.....kttttttttttttk.hh.kccseccccsecckhj.hkcceecccceecckhjjhkppcccppcccppkh.jH.kccckwwkccck..hh.","...kk......kk.......kPPk....kPPk......kPPkkkkkkPPk......kttttttttttk.....kttttttttttttk....kccesccccescckhh..kcceecccceecch.jh.kppcccppcccpphjjh..kccckwwkccckhj.h...kkkkkkkkkk..hH.",".....................kk......kk.......kPPk....kPPk......kPPkkkkkkPPk......kttttttttttk.....kttttttttttttkhh..kccesccccescchj.h.kcceecccceecchjjh.kppcccppcccpph.jh..kccckwwkccck.Hh.","..kk......kk.......kPPk....kPPk......kPPkkkkkkPPk......kttttttttttk.....kttttttttttttk....kccseccccsecck.hh.kcceecccceecckh.jhkppcccppcccppkhjjh.kccckwwkccck.Hj.h..kkkkkkkkkk...hh.","....................kk......kk.......kPPk....kPPk......kPPkkkkkkPPk......kttttttttttk.....kttttttttttttk.hh.kccseccccsecckhj.hkcceecccceecckHjjhkppcccppcccppkh.jh.kccckwwkccck..hh.","...kk......kk.......kPPk....kPPk......kPPkkkkkkPPk......kttttttttttk.....kttttttttttttk....kccesccccescckhh..kcceecccceeccH.jh.kppcccppcccpphjjh..kccckwwkccckhj.h...kkkkkkkkkk..hh.",".....................kk......kk.......kPPk....kPPk......kPPkkkkkkPPk......kttttttttttk.....kttttttttttttkHh..kccesccccescchj.h.kcceecccceecchjjh.kppcccppcccpph.jh..kccckwwkccck.hh.","..kk......kk...yy..kPPk....kPPk.y..y.kPPkkkkkkPPk...y..kttttttttttk.....kttttttttttttk..y.kccesccccescck.Hh.kcceecccceecckhj.hkppcccppcccppkhjjh.kccckwwkccck.h.jh..kkkkkkkkkk...hh.","..kk......kk.......kPPk....kPPk......kPPkkkkkkPPk......kttttttttttk.....kttttttttttttk....kccesccccescck.Hh.kcceecccceecckhj.hkppcccppcccppkhjjh.kccckwwkccck.h.jh..kkkkkkkkkk...hh.","..kk......kk...rr..kPPk....kPPk..rr..kPPkkkkkkPPk..rr..kttttttttttk.....kttttttttttttk.rr.kccssccccsscck.hh.kccseccccsecckh.jhkppcccppcccppkhjjH.kccckeekccck.hj.h..kkkkkkkkkk...hh.","..kk......kk.......kPPk....kPPk......kPPkkkkkkPPk......kttttttttttk.....kttttttttttttk....kccssccccsscck.hh.kccseccccsecckh.jhkppcccppcccppkhjjH.kccckeekccck.hj.h..kkkkkkkkkk...hh.","..kk......kk...y...kPPk....kPPk.yyy..kPPkkkkkkPPk..y...kttttttttttk.....kttttttttttttk....kcceccccccecck.Hh.kcececcccececkhj.hkppcccppcccppkhjjh.kccckwwkccck.h.jh..kkkkkkkkkk...hh.","..kk......kk.......kPPk....kPPk......kPPkkkkkkPPk...y..kttttttttttk..yyykttttttttttttk..y.kcceccccccecck.Hh.kcececcccececkhj.hkppcccppcccppkhjjh.kccckwwkccck.h.jh..kkkkkkkkkk...hh.","p.kk......kk...y.y.kPPk....kPPkt.....kPPkkkkkkPPk....p.kttttttttttk.b...kttttttttttttk..y.kcceccccccecck.Hh.kcececcccececkhj.hkppcccppcccppkhjjh.kccckwwkccck.h.jh..kkkkkkkkkk...hh.","..............b.....kk......kk....y.pkPPk....kPPk..y.y.kPPkkkkkkPPkt.....kttttttttttk....pkttttttttttttk.hh.kcceccccccecckh.jhkcececcccececkhjjHkppcccppcccppkhj.h.kccckwwkccck..hh.","p.kk......kk...y.y.kPPk....kPPkt.....kPPkkkkkkPPk....p.kttttttttttk.b...kttttttttttttk..y.kcceccccccecck.hh.kcececcccececkhj.hkppcccppcccppkhjjh.kccckwwkccck.h.jh..kkkkkkkkkk...Hh.","..............b.....kk......kk....y.pkPPk....kPPk..y.y.kPPkkkkkkPPkt.....kttttttttttk....pkttttttttttttk.hh.kcceccccccecckH.jhkcececcccececkhjjhkppcccppcccppkhj.h.kccckwwkccck..hh.","p.kk......kk...y.y.kPPk....kPPkt.....kPPkkkkkkPPk....p.kttttttttttk.b...kttttttttttttk..y.kcceccccccecck.hh.kcececcccececkhj.Hkppcccppcccppkhjjh.kccckwwkccck.h.jh..kkkkkkkkkk...hh.","..............b.....kk......kk....y.pkPPk....kPPk..y.y.kPPkkkkkkPPkt.....kttttttttttk....pkttttttttttttk.hh.kcceccccccecckh.jhkcececcccececkhjjhkppcccppcccppkhj.h.kccckwwkccck..hH.","..kk......kk...b...kPPk....kPPk.bbb..kPPkkkkkkPPk.bbb..kttttttttttk..b..kttkkttttkkttk....kccseccccsecck.Hh.kcceecccceecckhj.hkppcccppcccppkhjjhkcccckwwkcccckh.jh.kkkkkkkkkkkk..hh.","..kk......kk.......kPPk....kPPk..b...kPPkkkkkkPPk.bbb..kttttttttttk.bbb.kttkkttttkkttk.b..kccseccccsecck.Hh.kcceecccceecckhj.hkppcccppcccppkhjjhkcccckwwkcccckh.jh.kkkkkkkkkkkk..hh.","..kk......kk.......kPPk....kPPk..b...kPPkkkkkkPPk.bbb..kttttttttttk.bbb.kttkkttttkkttk.b..kcccccccccccck.Hh.kcckkcccckkcckhj.hkppcccppcccppkhjjhkcccckwwkcccckh.jh.kkkkkkkkkkkk..hh.","..kk......kk.......kPPk....kPPk......kPPkkkkkkPPk..gg..kttttttttttk...g.kttttttttttttk..ggkcccccccccccck.Hh.kcckkcccckkcckhj.hkppcccppcccppkhjjh.kccckwwkccck.h.jh..kkkkkkkkkk...hh.","...............gg...kk......kk....g..kPPk....kPPk...gg.kPPkkkkkkPPk......kttttttttttk.....kttttttttttttk.Hh.kcccccccccccckhj.hkcckkcccckkcckhjjhkppcccppcccppkh.jh.kccckwwkccck..hh.","..kk......kk..gggg.kPPk....kPPk...g..kPPkkkkkkPPk..g...kttttttttttk.ggggkttttttttttttk....kcccccccccccck.Hh.kcckkcccckkcckhj.hkppcccppcccppkhjjh.kccckwwkccck.h.jh..kkkkkkkkkk...hh.","....................kk......kk.......kPPk....kPPk......kPPkkkkkkPPk......kttttttttttk.....kttttttttttttk.Hh.kcccccccccccckhj.hkcckkcccckkcckhjjhkppcccppcccppkh.jh.kccckwwkccck..hh."],"moods":{"idle":[[0,2400],[1,130],[0,1600],[2,200],[0,200],[2,200],[0,2000],[1,110],[0,110],[1,110]],"working":[[3,90],[4,90],[5,90],[6,90],[7,90],[8,90],[9,90],[10,90],[11,90],[12,90]],"waiting":[[13,650],[14,300]],"error":[[15,420],[16,160]],"done":[[17,500],[18,500]],"party":[[19,140],[20,140],[21,140],[22,140],[23,140],[24,140]],"sweat":[[25,700],[26,450],[27,350]],"asleep":[[28,1100],[29,1100],[30,1100],[31,1100]]},"quips":{"idle":"wheel at rest","working":"running the wheel (it is going great)","waiting":"paws up, waiting on you","error":"dropped the seed. it rolled away","done":"stashed it","party":"wheel party!","sweat":"cheeks almost full","asleep":"zzz"},"faces":{"idle":"(o'.'o)","working":"(o>.<o)","waiting":"(o'.'o)?","error":"(O.O)!","done":"(o^.^o)","party":"(o^o^o)~","sweat":"(oO.Oo)","asleep":"(o-.-o) z"}},
+"duck":{"accent":"#ff7711","onAccent":"#111111","palette":{"k":"#ddaa11","Y":"#ffdd44","h":"#ffee77","D":"#ffcc11","y":"#ffaa11","o":"#ff7711","O":"#cc4411","e":"#222222","s":"#ffffff","p":"#ff77aa","b":"#77ccff","B":"#44aaff","r":"#ee4444","g":"#aaaaaa"},"px":[".....khhk............kkYYYYkk.........kYhYYYYYYk.......kYYseYYseYYk......kYYeeYYeeYYk...b..kppYooooYppk..B....kDDoOOoDDk..s.B....kkkkkkkk....B..bbsbbbbbsbbbbbsbbbBBbBBBBBbBBBBBbBBB",".....khhk............kkYYYYkk.........kYhYYYYYYk.......kYYseYYseYYk...b..kYYeeYYeeYYk..B...kppYooooYppk.s.B...kDDoOOoDDk...B.....kkkkkkkk.......bsbbbbbsbbbbbsbbbbBBBbBBBBBbBBBBBbBB",".......................khhk............kkYYYYkk......b..kYhYYYYYYk....B..kYYseYYseYYk..s.B.kYYeeYYeeYYk...B..kppYooooYppk.......kDDoOOoDDk......sbbkkkkkkkkbsbbbbbBBBBbBBBBBbBBBBBbB",".......................khhk........b...kkYYYYkk.....B...kYhYYYYYYk...s.B.kYYYYYYYYYYk...B..kYYkkYYkkYYk......kppYooooYppk.......kDDoOOoDDk......bbbkkkkkkkksbbbbbsBBBBBbBBBBBbBBBBBb",".....khhk.......b....kkYYYYkk....B....kYhYYYYYYk..s.B..kYYseYYseYYk..B...kYYeeYYeeYYk......kppYooooYppk.......kDDoOOoDDk.........kkkkkkkk.......bbbbsbbbbbsbbbbbsbbBBBBBbBBBBBbBBBBB",".....khhk......B.....kkYYYYkk...s.B...kYhYYYYYYk...B...kYYseYYseYYk......kYYeeYYeeYYk......kppYooooYppk.......kDDoOOoDDk....b....kkkkkkkk.......bbbsbbbbbsbbbbbsbbBbBBBBBbBBBBBbBBBB",".......................khhk............kkYYYYkk.........kYhYYYYYYk.......kYYseYYseYYk......kYYeeYYeeYYk...Bb.kppYooooYppk..s.B..kDDoOOoDDk....B.bbskkkkkkkkbbbsbbbBBbBBBBBbBBBBBbBBB",".......................khhk............kkYYYYkk.........kYhYYYYYYk.......kYYseYYseYYk...Bb.kYYeeYYeeYYk..s.B.kppYooooYppk...B...kDDoOOoDDk......bsbkkkkkkkkbbsbbbbBBBbBBBBBbBBBBBbBB",".....khhk............kkYYYYkk.........kYhYYYYYYk.......kYYYYYYYYYYk..Bb..kYYkkYYkkYYk.s.B..kppYooooYppk..B....kDDoOOoDDk.........kkkkkkkk.......sbbbbbsbbbbbsbbbbbBBBBbBBBBBbBBBBBbB",".....khhk............kkYYYYkk.........kYhYYYYYYk...Bb..kYYseYYseYYk.s.B..kYYeeYYeeYYk..B...kppYooooYppk.......kDDoOOoDDk.........kkkkkkkk.......bbbbbsbbbbbsbbbbbsBBBBBbBBBBBbBBBBBb",".......................khhk.......Bb...kkYYYYkk....s.B..kYhYYYYYYk....B..kYYYYYYYYYYk......kYYkkYYkkYYk......kppYooooYppk.......kDDoOOoDDk......bbbkkkkkkkkbbbbbsbbBBBBBbBBBBBbBBBBB",".....khhk............kkYYYYkk.........kYhYYYYYYk.......kYYesYYesYYk......kYYeeYYeeYYk...b..kppYooooYppk..B....kDDoOOoDDk..s.B....kkkkkkkk....B..bbsbbbbbsbbbbbsbbbBBbBBBBBbBBBBBbBBB",".......................khhk............kkYYYYkk.........kYhYYYYYYk....b..kYYesYYesYYk..B...kYYeeYYeeYYk.s.B..kppYooooYppk..B....kDDoOOoDDk......bsbkkkkkkkkbbsbbbbBBBbBBBBBbBBBBBbBB",".....khhk............kkYYYYkk.........kYhYYYYYYk.....b.kYYseYYseYYk...B..kYYeeYYeeYYk..s.B.kppYooooYppk...B...kDDoOOoDDk.........kkkkkkkk.......sbbbbbsbbbbbsbbbbbBBBBbBBBBBbBBBBBbB",".......................khhk........b...kkYYYYkk.....B...kYhYYYYYYk...s.B.kYYseYYseYYk...B..kYYeeYYeeYYk......kppYooooYppk.......kDDoOOoDDk......bbbkkkkkkkksbbbbbsBBBBBbBBBBBbBBBBBb",".....khhk.......b....kkYYYYkk....B....kYhYYYYYYk..s.B..kYYesYYesYYk..B...kYYeeYYeeYYk......kppYooooYppk.......kDDoOOoDDk.........kkkkkkkk.......bbbbsbbbbbsbbbbbsbbBBBBBbBBBBBbBBBBB","...............B.......khhk.....s.B....kkYYYYkk....B....kYhYYYYYYk.......kYYesYYesYYk......kYYeeYYeeYYk......kppYooooYppk...b...kDDoOOoDDk......bbbkkkkkkkkbbbbsbbBbBBBBBbBBBBBbBBBB",".....khhk............kkYYYYkk.........kYhYYYYYYk.......kYYseYYseYYk......kYYeeYYeeYYk......kppYooooYppk...Bb..kDDoOOoDDk...s.B...kkkkkkkk.....B.bbsbbbbbsbbbbbsbbbBBbBBBBBbBBBBBbBBB",".....khhk............kkYYYYkk.........kYhYYYYYYk.......kYYesYYesYYk..Bb..kYYeeYYeeYYk.s.B..kppYooooYppk..B....kDDoOOoDDk.........kkkkkkkk.......sbbbbbsbbbbbsbbbbbBBBBbBBBBBbBBBBBbB",".......................khhk............kkYYYYkk....Bb...kYhYYYYYYk..s.B..kYYesYYesYYk..B...kYYeeYYeeYYk......kppYooooYppk.......kDDoOOoDDk......bbbkkkkkkkksbbbbbsBBBBBbBBBBBbBBBBBb","......khhk.....yy.....kkYYYYkk..y..y...kYhYYYYYYk...y...kYYesYYesYYk......kYYeeYYeeYYk..y...kppYooooYppk.......kDDoOOoDDk.........kkkkkkkk......bbsbbbbbsbbbbbsbbbBBbBBBBBbBBBBBbBBB","......khhk............kkYYYYkk.........kYhYYYYYYk.......kYYesYYesYYk......kYYeeYYeeYYk......kppYooooYppk.......kDDoOOoDDk.........kkkkkkkk......bsbbbbbsbbbbbsbbbbBBBbBBBBBbBBBBBbBB","...............rr......khhk...b..rr..B.kkYYYYkk....rr..kYYssYYssYYk...B..kYYseYYseYYkb.rr.bkppYooooYppk.......kDDeeeeDDk...b.....kkkkkkkk.......bbsbbbbbsbbbbbsbbbBBbBBBBBbBBBBBbBBB",".....khhk............kkYYYYkk.........kYhYYYYYYk.......kYYssYYssYYb......bYYseYYseYYk......kppYooooYppk...b.b.kDDeeeeDDk.B.......kkkkkkkk....B..sbbbbbsbbbbbsbbbbbBBBBbBBBBBbBBBBBbB",".....khhk......y.....kkYYYYkk...yyy...kYhYYYYYYk...y...kYYeYYYYeYYk......kYeYeYYeYeYk...b..kppYooooYppk..B....kDDoOOoDDk..s.B....kkkkkkkk....B..bbsbbbbbsbbbbbsbbbBBbBBBBBbBBBBBbBBB",".......................khhk............kkYYYYkk.....yb..kYhYYYYYYk...yyy.kYYeYYYYeYYk..syB.kYeYeYYeYeYk...B..kppYooooYppk.......kDDoOOoDDk......sbbkkkkkkkkbsbbbbbBBBBbBBBBBbBBBBBbB","y....kyyk......p.....kkYppYkk..p......kYhpBBpYYk.....y.kYYeYYYYeYYk.b....kYeYeYYeYeYk......kppYooooYppk...B...kDDoOOoDDk.........kkkkkkkk.......bbsbbbbbsbbbbbsbbbBBbBBBBBbBBBBBbBBB",".......................kyyk.........y..kkYppYkk....p....kYhpBBpYYk.p.....kYYeYYYYeYYk....y.kYeYeYYeYeYk.b....kppYooooYppk.......kDDoOOoDDky...B.sbbkkkkkkkkbsbbbbbBBBBbBBBBBbBBBBBbB",".b...kyyk............kkYppYkk.y...B...kYhpBBpYYk.......kYYeYYYYeYYk.....ykYeYeYYeYeYk..p...kppYooooYppkp......kDDoOOoDDk.....y...kkkkkkkk...b...bbbbsbbbbbsbbbbbsbbBBBBBbBBBBBbBBBBB",".................y.....kyyk.....b....b.kkYppYkk.........kYhpBBpYYky...B..kYYeYYYYeYYk......kYeYeYYeYeYk.....ykppYooooYppk..p....kDDoOOoDDk.p....bbskkkkkkkkbbbsbbbBBbBBBBBbBBBBBbBBB","y....kyyk......p.....kkYppYkk..p......kYhpBBpYYk.....y.kYYeYYYYeYYk.b....kYeYeYYeYeYk......kppYooooYppk...B...kDDoOOoDDk.........kkkkkkkk.......sbbbbbsbbbbbsbbbbbBBBBbBBBBBbBBBBBbB",".......................kyyk.........y..kkYppYkk....p....kYhpBBpYYk.p.....kYYeYYYYeYYk....y.kYeYeYYeYeYk.b....kppYooooYppk.......kDDoOOoDDky...B.bbbkkkkkkkkbbbbbsbbBBBBBbBBBBBbBBBBB",".....khhk......b.....kkYYYYkk...bbb...kYkkYYkkYk..bbb..kYYseYYseYYk..b...kYYeeYYeeYYk......kppYooooYppk.......kDDoOOoDDk......bsbbbsbbbsbbbsbbbsbbsbbbbbsbbbbbsbbbBBbBBBBBbBBBBBbBBB",".....khhk......b.....kkYYYYkk...bbb...kYkkYYkkYk..bbb..kYYseYYseYYk..b...kYYeeYYeeYYk......kppYooooYppk.....bsbbbsbbbsbbbsbbbsbbbbbbbbbbbbbbbbbbbsbbbbbsbbbbbsbbbbBBBbBBBBBbBBBBBbBB",".....khhk......b.....kkYYYYkk...bbb...kYkkYYkkYk..bbb..kYYseYYseYYk..b...kYYeeYYeeYYk.....bsbbbsbbbsbbbsbbbsbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbsbbbbbsbbbbbsbbbbbBBBBbBBBBBbBBBBBbB",".......................khhk............kkYYYYkk....gg...kYhYYYYYYk....g..kYYYYYYYYYYk...gg.kYYkkYYkkYYk......kppYooooYppk.......kDDoOOoDDk......bbskkkkkkkkbbbsbbbBBbBBBBBbBBBBBbBBB","...............gg......khhk.......g....kkYYYYkk.....gg..kYhYYYYYYk.......kYYYYYYYYYYk......kYYkkYYkkYYk......kppYooooYppk.......kDDoOOoDDk......bsbkkkkkkkkbbsbbbbBBBbBBBBBbBBBBBbBB",".....khhk.....gggg...kkYYYYkk.....g...kYhYYYYYYk...g...kYYYYYYYYYYk.gggg.kYYkkYYkkYYk......kppYooooYppk.......kDDoOOoDDk.........kkkkkkkk.......sbbbbbsbbbbbsbbbbbBBBBbBBBBBbBBBBBbB",".....khhk............kkYYYYkk.........kYhYYYYYYk.......kYYYYYYYYYYk......kYYkkYYkkYYk......kppYooooYppk.......kDDoOOoDDk.........kkkkkkkk.......bbbbbsbbbbbsbbbbbsBBBBBbBBBBBbBBBBBb"],"moods":{"idle":[[0,600],[1,600],[2,600],[3,130],[4,600],[5,600],[6,600],[7,600],[8,110],[9,110],[10,110]],"working":[[11,110],[12,110],[13,110],[14,110],[15,110],[16,110],[17,110],[7,110],[18,110],[19,110]],"waiting":[[20,650],[21,300]],"error":[[22,420],[23,160]],"done":[[24,500],[25,500]],"party":[[26,140],[27,140],[28,140],[29,140],[30,140],[31,140]],"sweat":[[32,700],[33,450],[34,350]],"asleep":[[35,1100],[36,1100],[37,1100],[38,1100]]},"quips":{"idle":"floating, listening","working":"listening to the whole story","waiting":"go on, explain it to me","error":"quack! that was the bug","done":"quack. you found it","party":"bath party!","sweat":"the water is rising","asleep":"zzz"},"faces":{"idle":"(o>)","working":"(o>)~","waiting":"(o>)?","error":"(O>)!","done":"(^>)","party":"(^>)/","sweat":"(o>);","asleep":"(->) z"}},
+"axolotl":{"accent":"#ff77aa","onAccent":"#441144","palette":{"k":"#cc4477","a":"#ffccdd","A":"#ffaacc","G":"#ff4477","P":"#ff77aa","e":"#441144","s":"#ffffff","w":"#ffeeff","v":"#44dd44","V":"#117711","y":"#ffaa11","r":"#ee4444","g":"#aaaaaa","b":"#77ccff","B":"#44aaff"},"px":["G..G......G..G....GG.GG....GG.GG.....GGGG....GGGG......GGkkkkkkkkGG.....GGkseawwasekGG.....GkeeaaaaeekG..v...kPPkaaaakPPk...v..kaaakkkkaaak..v.v.kAAAAAAAAAAk...vv..kkkkkkkkkk...VvV","..................G..G......G..G....GG.GG....GG.GG.....GGkkkkkkkkGG.....GGkseawwasekGG.....GkeeaaaaeekG..v...kPPkaaaakPPk...v..kaaakkkkaaak..v.v.kAAAAAAAAAAk...vv..kkkkkkkkkk...VvV","G..G......G..G....GG.GG....GG.GG.....GGGG....GGGG......GGkkkkkkkkGG.....GGkseawwasekGG.....GkeeaaaaeekG...v..kPPkaaaakPPk..v...kaaakkkkaaak..v.v.kAAAAAAAAAAk..vv...kkkkkkkkkk...VvV","..................G..G......G..G....GG.GG....GG.GG.....GGkkkkkkkkGG.....GGkseawwasekGG.....GkeeaaaaeekG...v..kPPkaaaakPPk..v...kaaakkkkaaak..v.v.kAAAAAAAAAAk..vv...kkkkkkkkkk...VvV","G..G......G..G....GG.GG....GG.GG.....GGGG....GGGG......GGkkkkkkkkGG.....GGkaaawwaaakGG.....GkkkaaaakkkG..v...kPPkaaaakPPk...v..kaaakkkkaaak..v.v.kAAAAAAAAAAk...vv..kkkkkkkkkk...VvV","G..G......G..G....GG.GG....GG.GG.....GGGG....GGGG......GGkkkkkkkkGG.....GGkaaawwaaakGG.....GkkkaaaakkkG...v..kPPkaaaakPPk..v...kaaakkkkaaak..v.v.kAAAAAAAAAAk..vv...kkkkkkkkkk...VvV","G..G......G..G....GG.GG....GG.GG.....GGGG....GGGG..B...GGkkkkkkkkGG.s.B.GGkesawwaeskGG.B...GkeeaaaaeekG..v...kPPkaaaakPPk...v..kaaakkkkaaak..v.v.kAAAAAAAAAAk...vv..kkkkkkkkkk...VvV","..................G..G......G..G.B..GG.GG....GG.GGs.B..GGkkkkkkkkGG..B..GGkesawwaeskGG.....GkeeaaaaeekG..v...kPPkaaaakPPk...v..kaaakkkkaaak..v.v.kAAAAAAAAAAk...vv..kkkkkkkkkk...VvV","G..G......G..G.B..GG.GG....GG.GGs.B..GGGG....GGGG..B...GGkkkkkkkkGG.....GGkseawwasekGG.....GkeeaaaaeekG...v..kPPkaaaakPPk..v...kaaakkkkaaak..v.v.kAAAAAAAAAAk..vv...kkkkkkkkkk...VvV","G..G......G..G.yy.GG.GG....GG.GGy..y.GGGG....GGGG...y..GGkkkkkkkkGG.....GGkesawwaeskGG..y..GkeeaaaaeekG..v...kPPkaaaakPPk...v..kaaakkkkaaak..v.v.kAAAAAAAAAAk...vv..kkkkkkkkkk...VvV","G..G......G..G....GG.GG....GG.GG.....GGGG....GGGG......GGkkkkkkkkGG.....GGkesawwaeskGG.....GkeeaaaaeekG...v..kPPkaaaakPPk..v...kaaakkkkaaak..v.v.kAAAAAAAAAAk..vv...kkkkkkkkkk...VvV","..........G..G.rr..........GG.GG.rr..........GGGG..rr....kkkkkkkkGG.....GGkeeawwaeekGG.rr..GkseaaaasekG..v...kPeeakkaeePk...v..kaaaakkaaaak..v.v.kAAAAAAAAAAk...vv..kkkkkkkkkk...VvV","..........G..G.............GG.GG.....GG......GGGG......GGkkkkkkkkGG.....GGkeeawwaeekGG.....GkseaaaasekG...v..kPeeakkaeePk..v...kaaaakkaaaak..v.v.kAAAAAAAAAAk..vv...kkkkkkkkkk...VvV","G..G......G..G....GG.GG....GG.GG.....GGGG....GGGG......GGkkkkkkkkGG.....GGkeeawwaeekGG.....GkseaaaasekG..v...kPeeakkaeePk...v..kaaaakkaaaak..v.v.kAAAAAAAAAAk...vv..kkkkkkkkkk...VvV","G..G......G..G.y..GG.GG....GG.GGyyy..GGGG....GGGG..y...GGkkkkkkkkGG.....GGkaeawwaeakGG.....GkeaeaaeaekG..v...kPPkaaaakPPk...v..kaaakkkkaaak..v.v.kAAAAAAAAAAk...vv..kkkkkkkkkk...VvV","..................G..G......G..G....GG.GG....GG.GG..y..GGkkkkkkkkGG..yyyGGkaeawwaeakGG..y..GkeaeaaeaekG...v..kPPkaaaakPPk..v...kaaakkkkaaak..v.v.kAAAAAAAAAAk..vv...kkkkkkkkkk...VvV","G..G......G..G....GG.GG....GG.GG.....GGGG....GGGG.G.G..GGkkkkkkkkGG.GGG.GGkaeawwaeakGG.G...GkeaeaaeaekG..v...kPPkaaaakPPk...v..kaaakkkkaaak..v.v.kAAAAAAAAAAk...vv..kkkkkkkkkk...VvV","................................G.G.G..G......G..GGGG.GG.GG....GG.GG.G...GGkkkkkkkkGG.....GGkaeawwaeakGG.v...GkeaeaaeaekG...v..kPPkaaaakPPk..v.v.kaaakkkkaaak...vv.kAAAAAAAAAAk..VvV","G..G......G..GG.G.GG.GG....GG.GGGGG..GGGG....GGGG..G...GGkkkkkkkkGG.....GGkaeawwaeakGG.....GkeaeaaeaekG...v..kPPkaaaakPPk..v...kaaakkkkaaak..v.v.kAAAAAAAAAAk..vv...kkkkkkkkkk...VvV","....................................G..G......G..Gr.r.GG.GG....GG.GGrrr..GGkkkkkkkkGG..r..GGkaeawwaeakGG..v..GkeaeaaeaekG..v...kPPkaaaakPPk..v.v.kaaakkkkaaak..vv..kAAAAAAAAAAk..VvV","G..G......G..G....GG.GG....GG.GGr.r..GGGG....GGGG.rrr..GGkkkkkkkkGG..r..GGkaeawwaeakGG.....GkeaeaaeaekG..v...kPPkaaaakPPk...v..kaaakkkkaaak..v.v.kAAAAAAAAAAk...vv..kkkkkkkkkk...VvV","..............r.r...............rrr.G..G......G..G.r..GG.GG....GG.GG.....GGkkkkkkkkGG.....GGkaeawwaeakGG.v...GkeaeaaeaekG...v..kPPkaaaakPPk..v.v.kaaakkkkaaak...vv.kAAAAAAAAAAk..VvV","...............b..G..G......G..Gbbb.GG.GG....GG.GGbbb..GGkkkkkkkkGG..b..GGkkeawwaekkGG.....GkeeaaaaeekG..v...kPPaakakaPPk...v..kaaakakaaaak..v.v.kAAAAAAAAAAk...vv..kkkkkkkkkk...VvV","..................G..G......G..G.b..GG.GG....GG.GGbbb..GGkkkkkkkkGG.bbb.GGkkeawwaekkGG.b...GkeeaaaaeekG...v..kPPaakakaPPk..v...kaaakakaaaak..v.v.kAAAAAAAAAAk..vv...kkkkkkkkkk...VvV","..................G..G......G..G.b..GG.GG....GG.GGbbb..GGkkkkkkkkGG.bbb.GGkaaawwaaakGG.b...GkkkaaaakkkG..v...kPPaakakaPPk...v..kaaakakaaaak..v.v.kAAAAAAAAAAk...vv..kkkkkkkkkk...VvV","....................................G..G......G..G.gg.GG.GG....GG.GG..g..GGkkkkkkkkGG...ggGGkaaawwaaakGG.v...GkkkaaaakkkG...v..kPPkaaaakPPk..v.v.kaaakkkkaaak...vv.kAAAAAAAAAAk..VvV","...............gg.G..G......G..G..g.GG.GG....GG.GG..gg.GGkkkkkkkkGG.....GGkaaawwaaakGG.....GkkkaaaakkkG...v..kPPkaaaakPPk..v...kaaakkkkaaak..v.v.kAAAAAAAAAAk..vv...kkkkkkkkkk...VvV","..............gggg................g.G..G......G..G.g..GG.GG....GG.GGgggg.GGkkkkkkkkGG.....GGkaaawwaaakGG.v...GkkkaaaakkkG...v..kPPkaaaakPPk..v.v.kaaakkkkaaak...vv.kAAAAAAAAAAk..VvV","..................G..G......G..G....GG.GG....GG.GG.....GGkkkkkkkkGG.....GGkaaawwaaakGG.....GkkkaaaakkkG...v..kPPkaaaakPPk..v...kaaakkkkaaak..v.v.kAAAAAAAAAAk..vv...kkkkkkkkkk...VvV"],"moods":{"idle":[[0,1000],[1,450],[2,450],[3,450],[0,900],[4,130],[2,900],[3,450],[0,450],[4,110],[2,110],[5,110]],"working":[[6,140],[7,140],[8,140],[3,140],[6,140],[7,140],[8,140],[3,140]],"waiting":[[9,650],[10,300]],"error":[[11,420],[12,300],[13,300]],"done":[[14,500],[15,500]],"party":[[16,140],[17,140],[18,140],[19,140],[20,140],[21,140]],"sweat":[[22,700],[23,450],[24,350]],"asleep":[[25,1100],[26,1100],[27,1100],[28,1100]]},"quips":{"idle":"floating and smiling","working":"wiggling toward the answer","waiting":"needs your OK, blup","error":"lost a limb. regrowing it.","done":"regrown and ready","party":"bubble party!","sweat":"running out of tank","asleep":"zzz"},"faces":{"idle":"}(o.o){","working":"}(o.o){~","waiting":"}(o.o){?","error":"}(O.O){!","done":"}(^u^){","party":"}(^u^){~","sweat":"}(o.o){;","asleep":"}(-.-){ z"}},
+"bunny":{"accent":"#44dd44","onAccent":"#111111","palette":{"k":"#aa77aa","f":"#ffddee","l":"#ddccff","p":"#ffaacc","P":"#ff77aa","e":"#441144","i":"#44aaff","s":"#ffffff","o":"#ff7711","O":"#cc4411","v":"#44dd44","y":"#ffaa11","r":"#ee4444","g":"#aaaaaa","b":"#77ccff"},"px":["...kk....kk.........kPpk..kpPk........kppk..kppk........kppk..kppk........kppkkkkppk.......ksiiffffsiik..vv.kfieiffffieifk.oo.kfieifPPfieifk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.","..kk.....kk........kPpk...kpPk........kppk..kppk........kppk..kppk........kppkkkkppk.......ksiiffffsiik..vv.kfieiffffieifk.oo.kfieifPPfieifk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.","...kk.....kk........kPpk...kpPk.......kppk..kppk........kppk..kppk........kppkkkkppk.......ksiiffffsiik..vv.kfieiffffieifk.oo.kfieifPPfieifk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.","...kk....kk.........kPpk..kpPk........kppk..kppk........kppk..kppk........kppkkkkppk.......kffffffffffk..vv.kffffffffffffk.oo.kfeeefPPfeeefk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.","...kk....kk.........kPpk..kpPk........kppk..kppk........kppk..kppk........kppkkkkppk.......ksiiffffsiik..vv.kfieiffffieifk.oo.kfieiffPfieifk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.","..kk.....kk........kPpk...kpPk........kppk..kppk........kppk..kppk........kppkkkkppk.......ksiiffffsiik..vv.kfiieffffiiefk.oo.kfiiefPPfiiefk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.","...kk.....kk........kPpk...kpPk.......kppk..kppk........kppk..kppk........kppkkkkppk.......ksiiffffsiik..vv.kfiieffffiiefk.oo.kfiiefPPfiiefk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.","..kk.....kk........kPpk...kpPk........kppk..kppk........kppk..kppk........kppkkkkppk.......ksiiffffsiik..vv.kfeiiffffeiifk.oo.kfeiiffPfeiifk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.","...kk.....kk........kPpk...kpPk.......kppk..kppk........kppk..kppk........kppkkkkppk.......ksiiffffsiik..vv.kfeiiffffeiifk.oo.kfeiifPPfeiifk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.","...kk.....kk........kPpk...kpPk.......kppk..kppk........kppk..kppk........kppkkkkppk.......ksiiffffsiik..vv.kfiieffffiiefk.oo.kfiieffPfiiefk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.","..kk.....kk........kPpk...kpPk........kppk..kppk........kppk..kppk........kppkkkkppk.......ksiiffffsiik..vv.kfeiiffffeiifk.oo.kfeiifPPfeiifk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.","...kk....kk....yy...kPpk..kpPk..y..y..kppk..kppk....y...kppk..kppk........kppkkkkppk....y..ksiiffffsiik..vv.kfiieffffiiefk.oo.kfiiefPPfiiefk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.","...kk....kk.........kPpk..kpPk........kppk..kppk........kppk..kppk........kppkkkkppk.......ksiiffffsiik..vv.kfiieffffiiefk.oo.kfiiefPPfiiefk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.","...kk......kk..rr...kPpk....kpPk.rr....kppk..kppk..rr....kppk..kppk........kppkkkkppk..rr...keeeffffeeek.vv..kfeseffffesefkoo..kfeeefPPfeeefkoO..kppllleelllppk.o...kkkkkkkkkkkk..O.","..kk......kk.......kPpk....kpPk.......kppk..kppk........kppk..kppk........kppkkkkppk.......keeeffffeeek..vv.kfeseffffesefk.oo.kfeeefPPfeeefk.oO.kppllleelllppk..o..kkkkkkkkkkkk...O.","...kk......kk.......kPpk....kpPk.......kppk..kppk........kppk..kppk........kppkkkkppk.......keeeffffeeek.vv..kfeseffffesefkoo..kfeeefPPfeeefkoO..kppllleelllppk.o...kkkkkkkkkkkk..O.","...kk....kk....y....kPpk..kpPk..yyy...kppk..kppk...y....kppk..kppk........kppkkkkppk.......kffffffffffk..vv.kffeffffffeffk.oo.kfefefPPfefefk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.","..kk.....kk........kPpk...kpPk........kppk..kppk....y...kppk..kppk...yyy..kppkkkkppk....y..kffffffffffk..vv.kffeffffffeffk.oo.kfefefPPfefefk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.","y.kk.....kk....p.v.kPpk...kpPk.P......kppk..kppk.....yl.kppk..kppk..l.....kppkkkkppk....v..kffffffffffk..vv.kffeffffffeffk.oo.kfefefPPfefefk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.","l.............l......kk.....kk....v.y.kPpk...kpPk..p.v..kppk..kppk.P......kppk..kppk.....y..kppkkkkppk...vv..kffffffffffk..oo.kffeffffffeffk.oO.kfefefPPfefefk..o.kppllellellppk..O.","...............b................bbb...kkk....kkk..bbb..kpppk..kpppk..b...kpppkkkkpppk......kffffffffffk..vv.kfeeeffffeeefk.oo.kfieifPPfieifk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.",".................................b....kkk....kkk..bbb..kpppk..kpppk.bbb..kpppkkkkpppk..b...kffffffffffk..vv.kfeeeffffeeefk.oo.kfieifPPfieifk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.",".................................b....kkk....kkk..bbb..kpppk..kpppk.bbb..kpppkkkkpppk..b...kffffffffffk..vv.kffffffffffffk.oo.kfeeefPPfeeefk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.","......................................kkk....kkk...gg..kpppk..kpppk...g..kpppkkkkpppk...gg.kffffffffffk..vv.kffffffffffffk.oo.kfeeefPPfeeefk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.","...............gg.................g.................gg..kkk....kkk.......kpppk..kpppk......kpppkkkkpppk..vv..kffffffffffk..oo.kffffffffffffk.oO.kfeeefPPfeeefk..o.kppllellellppk..O.","..............gggg................g...kkk....kkk...g...kpppk..kpppk.gggg.kpppkkkkpppk......kffffffffffk..vv.kffffffffffffk.oo.kfeeefPPfeeefk.oO.kppllellellppk..o..kkkkkkkkkkkk...O.","........................................................kkk....kkk.......kpppk..kpppk......kpppkkkkpppk..vv..kffffffffffk..oo.kffffffffffffk.oO.kfeeefPPfeeefk..o.kppllellellppk..O."],"moods":{"idle":[[0,2400],[1,200],[0,200],[2,200],[0,1500],[3,130],[0,1800],[4,150],[0,150],[4,150],[0,2000],[3,110],[0,110],[3,110]],"working":[[5,160],[6,160],[7,160],[8,160],[5,160],[9,160],[10,160],[8,160]],"waiting":[[11,650],[12,300]],"error":[[13,420],[14,160],[15,160]],"done":[[16,500],[17,500]],"party":[[18,140],[19,140],[18,140],[19,140],[18,140],[19,140]],"sweat":[[20,700],[21,450],[22,350]],"asleep":[[23,1100],[24,1100],[25,1100],[26,1100]]},"quips":{"idle":"ears up","working":"ears swiveling, taking it all in","waiting":"ears up, waiting on you","error":"thump! thump!","done":"binky!","party":"binky binky binky!","sweat":"ears drooping, context filling","asleep":"zzz"},"faces":{"idle":"(\\o.o/)","working":"(\\o.o/)~","waiting":"(\\o.o/)?","error":"(\\O.O/)!","done":"(\\^.^/)","party":"(\\^o^/)~","sweat":"(\\o.o/);","asleep":"(\\-.-/) z"}}
+}/* theme-data:end */
+
+const W = 18, H = 10
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
+const state = { theme: 'cat', mood: 'idle' }
+const actors = []
+
+const frameAt = (timeline, t) => {
+  const total = timeline.reduce((sum, f) => sum + f[1], 0)
+  t %= total
+  for (const [i, ms] of timeline) {
+    if (t < ms) return i
+    t -= ms
+  }
+  return timeline[0][0]
+}
+
+const draw = (ctx, theme, px) => {
+  ctx.clearRect(0, 0, W, H)
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const p = px[y * W + x]
+      if (p === '.') continue
+      ctx.fillStyle = theme.palette[p]
+      ctx.fillRect(x, y, 1, 1)
+    }
+  }
+}
+
+// An actor is a canvas that plays whichever theme and mood its `pick` names.
+const addActor = (canvas, pick) => actors.push({ ctx: canvas.getContext('2d'), pick, key: '', shown: -1, since: 0 })
+
+const tick = now => {
+  for (const a of actors) {
+    const [name, mood] = a.pick()
+    const key = name + ' ' + mood
+    if (key !== a.key) Object.assign(a, { key, shown: -1, since: now })
+    const theme = THEMES[name]
+    const timeline = theme.moods[mood]
+    const i = reduceMotion ? timeline[0][0] : frameAt(timeline, now - a.since)
+    if (i !== a.shown) {
+      a.shown = i
+      draw(a.ctx, theme, theme.px[i])
+    }
+  }
+  if (!reduceMotion) requestAnimationFrame(tick)
+}
+
+const $ = id => document.getElementById(id)
+const root = document.documentElement
+const picks = [...document.querySelectorAll('[data-theme]')]
+const moodButtons = [...document.querySelectorAll('.mood')]
+const sounds = Object.fromEntries([...document.querySelectorAll('.theme')].map(b => [b.dataset.theme, b.dataset.sounds]))
+const names = Object.keys(THEMES)
+
+const select = (name, mood) => {
+  const theme = THEMES[name]
+  Object.assign(state, { theme: name, mood })
+  root.style.setProperty('--accent', theme.accent)
+  root.style.setProperty('--on-accent', theme.onAccent)
+  for (const b of picks) b.setAttribute('aria-pressed', String(b.dataset.theme === name))
+  for (const b of moodButtons) b.setAttribute('aria-pressed', String(b.dataset.mood === mood))
+  for (const id of ['stage-theme', 'hero-theme']) $(id).textContent = name
+  for (const id of ['stage-quip', 'hero-quip', 'band-quip']) $(id).textContent = theme.quips[mood]
+  $('stage-mood').textContent = mood
+  $('stage-face').textContent = theme.faces[mood]
+  $('stage-sounds').textContent = sounds[name]
+  $('stage-sprite').setAttribute('aria-label', `The ${name} mascot, ${mood}`)
+  $('hero-sprite').setAttribute('aria-label', `The ${name} mascot`)
+  if (reduceMotion) tick(performance.now())
+}
+
+// Until the reader picks something, the first screen walks once through the seven themes, slowly, and rests on the first.
+let cycling = !reduceMotion && names.length > 1
+let heroVisible = true
+let steps = 0
+const stopCycle = () => {
+  cycling = false
+  root.style.removeProperty('--field-t')
+}
+const cycle = () => {
+  if (!cycling) return
+  if (!document.hidden && heroVisible) select(names[++steps % names.length], 'idle')
+  if (steps < names.length) setTimeout(cycle, 5200)
+  else stopCycle()
+}
+
+if (names.length) {
+  addActor($('hero-sprite'), () => [state.theme, state.mood])
+  addActor($('stage-sprite'), () => [state.theme, state.mood])
+  addActor($('band-sprite'), () => [state.theme, state.mood])
+  for (const b of picks) {
+    addActor(b.querySelector('canvas'), () => [b.dataset.theme, 'idle'])
+    b.addEventListener('click', () => {
+      stopCycle()
+      select(b.dataset.theme, state.mood)
+    })
+  }
+  for (const b of moodButtons) {
+    b.addEventListener('click', () => {
+      stopCycle()
+      select(state.theme, b.dataset.mood)
+    })
+  }
+  select(state.theme, state.mood)
+  tick(performance.now())
+  if (cycling) {
+    root.style.setProperty('--field-t', '1.4s')
+    if ('IntersectionObserver' in window) new IntersectionObserver(([e]) => { heroVisible = e.isIntersecting }, { threshold: .25 }).observe(document.querySelector('.hero'))
+    setTimeout(cycle, 4500)
+  }
+}
+
+// Copy buttons: the clipboard where the browser allows it, otherwise select the text for the reader to copy.
+for (const b of document.querySelectorAll('[data-copy]')) {
+  const label = b.textContent
+  let timer
+  const flash = text => {
+    b.textContent = text
+    clearTimeout(timer)
+    timer = setTimeout(() => { b.textContent = label }, 1800)
+  }
+  b.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(b.dataset.copy)
+      flash('Copied')
+    } catch {
+      const range = document.createRange()
+      range.selectNodeContents(b.parentElement.querySelector('code'))
+      const sel = getSelection()
+      sel.removeAllRanges()
+      sel.addRange(range)
+      flash('Selected')
+    }
+  })
+}
+
+// Each section's parts arrive in reading order as it scrolls in. With no script, or reduced motion, everything is simply there.
+for (const group of document.querySelectorAll('[data-stagger]')) {
+  [...group.children].forEach((el, i) => {
+    el.setAttribute('data-reveal', '')
+    el.style.setProperty('--i', Math.min(i, 8))
+  })
+}
+if (!reduceMotion && 'IntersectionObserver' in window) {
+  root.classList.add('js')
+  const io = new IntersectionObserver(entries => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue
+      io.unobserve(e.target)
+      e.target.classList.add('in')
+      // Once it has arrived the element goes back to its own transitions, so hover and press feel as they should.
+      setTimeout(() => e.target.removeAttribute('data-reveal'), 1800)
+    }
+  }, { rootMargin: '0px 0px -8% 0px' })
+  for (const el of document.querySelectorAll('[data-reveal]')) io.observe(el)
+}
+</script>
+</body>
+</html>

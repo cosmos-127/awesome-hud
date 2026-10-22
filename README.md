@@ -159,7 +159,8 @@ claude --plugin-dir .              # reloads the mod each time you save
 claude plugin test .               # the tests in hooks/awesome-hud.test.tsx
 claude plugin validate --strict .  # what Claude Code will load, and anything it would refuse
 python3 scripts/sounds.py          # rebuild sounds/ from the recipes in the script
-python3 scripts/preview.py         # regenerate preview GIFs (requires Bun and Pillow)
+python3 scripts/preview.py         # regenerate the preview GIFs and the website's link card (requires Bun and Pillow)
+python3 scripts/site.py            # refresh the themes in index.html, the website (requires Bun)
 ```
 
 ## License

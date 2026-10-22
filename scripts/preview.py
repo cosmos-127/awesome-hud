@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Draws preview.gif (the band, mascots acting out moods) and moods.gif (every theme's
-every mood) from the themes' own frames, and the band's rows from the plugin's own
-formatting, so neither can fall behind it. Needs bun and Pillow.
+"""Draws preview.gif (the band, mascots acting out moods), moods.gif (every theme's
+every mood) and card.png (the website's link preview) from the themes' own frames, and
+the band's rows from the plugin's own formatting, so none can fall behind it. Needs bun
+and Pillow.
 
     python3 scripts/preview.py [outdir]    # outdir defaults to assets/
 """
@@ -18,6 +19,7 @@ FONT = '/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf'
 ITALIC = FONT.replace('Mono.ttf', 'Mono-Oblique.ttf')
 BOLD = FONT.replace('Mono.ttf', 'Mono-Bold.ttf')
 SYMBOLS = FONT.replace('Mono.ttf', '.ttf')  # the mono face lacks the branch glyph
+TITLE = FONT.replace('Mono.ttf', '-Bold.ttf')
 NOT_IN_MONO = '⎇'
 # What the band's color names look like: Claude Code's dark theme, near enough.
 TOKENS = {'success': (78, 186, 101), 'error': (255, 107, 128), 'warning': (255, 193, 7), 'suggestion': (177, 185, 249), 'merged': (175, 135, 255)}
@@ -185,8 +187,60 @@ def moods(themes):
     save('moods.gif', frames, [tick] * len(frames))
 
 
+def card(themes):
+    """The link preview, 1200 x 630: the website's first screen in miniature, the default theme's field
+    and a dark screen with the mascot and every theme's face."""
+    w, h, split, margin = 1200, 630, 780, 56
+    theme = themes['cat']
+    accent, ink = hexrgb(theme['accent']), hexrgb(theme['onAccent'])
+    im = Image.new('RGB', (w, h), accent)
+    d = ImageDraw.Draw(im)
+    d.rectangle([split, 0, w, h], fill=BG)
+
+    lines = ['A pixel mascot', 'under your prompt.']
+    size = 96
+    while size > 40 and max(d.textlength(s, font=ImageFont.truetype(TITLE, size)) for s in lines) > split - 2 * margin:
+        size -= 2
+    title = ImageFont.truetype(TITLE, size)
+    y = 150
+    for s in lines:
+        d.text((margin, y), s, fill=ink, font=title)
+        y += round(size * 1.05)
+    facts, fact_size = '7 themes  ·  optional sounds  ·  no telemetry', 30
+    while fact_size > 16 and d.textlength(facts, font=ImageFont.truetype(TITLE, fact_size)) > split - 2 * margin:
+        fact_size -= 1
+    d.text((margin, y + 28), facts, fill=ink, font=ImageFont.truetype(TITLE, fact_size))
+    d.rectangle([margin, h - 96, margin + 20, h - 76], fill=ink)
+    d.text((margin + 36, h - 104), 'awesome-hud', fill=ink, font=ImageFont.truetype(TITLE, 36))
+
+    cx, scale = (split + w) // 2, 20
+    top = 140
+    sprite(d, theme, theme['moods']['idle'][0]['px'], cx - 9 * scale, top, scale)
+    prompt, mono = ImageFont.truetype(SYMBOLS, 24), ImageFont.truetype(FONT, 24)
+    label = '/awesome-hud cat'
+    tw = d.textlength('❯ ', font=prompt) + d.textlength(label, font=mono)
+    x, y = cx - tw / 2, top + 10 * scale + 36
+    d.text((x, y), '❯ ', fill=DIM, font=prompt)
+    d.text((x + d.textlength('❯ ', font=prompt), y), label, fill=FG, font=mono)
+    d.text((cx - d.textlength('» ' + theme['quips']['idle'][0], font=mono) / 2, y + 36), '» ' + theme['quips']['idle'][0], fill=DIM, font=mono)
+
+    tile, gap = 2, 4
+    row_w = len(themes) * (18 * tile + 8) + (len(themes) - 1) * gap
+    x0, y0 = cx - row_w // 2, y + 96
+    for i, (name, t) in enumerate(themes.items()):
+        x = x0 + i * (18 * tile + 8 + gap)
+        d.rectangle([x, y0, x + 18 * tile + 7, y0 + 10 * tile + 12], fill=(35, 35, 35))
+        sprite(d, t, t['moods']['idle'][0]['px'], x + 4, y0 + 4, tile)
+        if name == 'cat':
+            d.rectangle([x, y0 + 10 * tile + 9, x + 18 * tile + 7, y0 + 10 * tile + 12], fill=accent)
+    path = OUT / 'card.png'
+    im.save(path, optimize=True)
+    print(f'{path}: {w} x {h}, {path.stat().st_size // 1024} KiB')
+
+
 if __name__ == '__main__':
     data = load()
     OUT.mkdir(parents=True, exist_ok=True)
     preview(data)
     moods(data)
+    card(data)
