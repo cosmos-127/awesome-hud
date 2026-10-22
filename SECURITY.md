@@ -13,7 +13,7 @@ Out of scope: weaknesses in Claude Code, `git`, or `gh` themselves, and code tha
 
 ## Supported versions
 
-Only the latest release is supported. Update with `claude plugin update awesome-hud`.
+Only the latest release is supported. See [Update](README.md#update) in the README for how to update.
 
 ## What the mod can do
 
