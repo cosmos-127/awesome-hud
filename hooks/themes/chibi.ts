@@ -2,41 +2,41 @@ import { SMALL_Z, frame, paint, shift, stamp } from '../sprite'
 import type { Patch } from '../sprite'
 import type { Theme } from '../theme'
 
-// Big violet eyes under swept bangs, a hairclip, an ahoge, and a side ponytail tied low on the right.
+// Big teal eyes under lavender bangs, a hairclip, an ahoge, and a side ponytail tied low on the right with a bow.
 const FACE = [
-  '........h.....',
+  '.......hh.....',
   '...kkhhhhkk...',
-  '.khyHHhhhhhhk.',
-  'khhYyhhhhhhhhk',
-  'khshhssssshhhk',
-  'khseesssseeshk',
-  'khswessssweshk',
-  'khsiHssssiHshk',
-  'khnnsMssMsnnhk',
-  '.khSssMMssShk.',
+  '.khHhhhhhhHhk.',
+  'khyyhhhhhhHhhk',
+  'khhhsssssshhhk',
+  'khdeesssseedhk',
+  'khdwisssswidhk',
+  'khdiissssiidhk',
+  'khnnssMMssnnhk',
+  '.khSssssssShk.',
 ]
 
 // Both eyes at once, each two pixels wide: their rows from y 5.
 const eyes = (...rows: string[]): Patch[] => rows.flatMap((r, i) => [[3, 5 + i, r], [9, 5 + i, r]] as Patch[])
 
 const BLINK = eyes('ss', 'ss', 'ee')
-const LOOK_LEFT = eyes('ee', 'ew', 'Hi')
-const LOOK_RIGHT = eyes('ee', 'we', 'iH')
+const LOOK_LEFT = eyes('ee', 'wi', 'ei')
+const LOOK_RIGHT = eyes('ee', 'wi', 'ie')
 const SLEEPY = eyes('ss', 'ee', 'ss')
 // Closed and smiling, ^ ^, each a pixel wider than the eye.
-const HAPPY: Patch[] = [...eyes('ss', 'ss', 'ss'), [2, 5, 'ses'], [2, 6, 'ese'], [9, 5, 'ses'], [9, 6, 'ese']]
+const HAPPY: Patch[] = [...eyes('ss', 'ss', 'ss'), [4, 5, 'e'], [3, 6, 'e'], [5, 6, 'e'], [9, 5, 'e'], [8, 6, 'e'], [10, 6, 'e']]
 // An open grin, the tongue showing.
 const GRIN: Patch[] = [[5, 8, 'MMMM'], [6, 9, 'nn']]
-// Eyes gone white with pinpoint pupils, mouth open.
-const SHOCK: Patch[] = [...eyes('ww', 'we', 'ww'), [5, 8, 'sMMs'], [6, 9, 'MM']]
+// Eyes gone big and dark with a pinpoint glint, mouth open.
+const SHOCK: Patch[] = [...eyes('ee', 'we', 'ee'), [6, 9, 'MM']]
 // Gloom lines down the bangs.
 const GLOOM: Patch[] = [[5, 2, 'b b b'], [5, 3, 'b b b']]
-const WOBBLE: Patch[] = [[5, 8, 'sMsM'], [6, 9, 'ss']]
-const AHOGE_SWAY: Patch[] = [[7, 0, 'h.']]
+const WOBBLE: Patch[] = [[7, 8, 'sM']]
+const AHOGE_SWAY: Patch[] = [[7, 0, '.hh']]
 
-// The ponytail, tied low behind the right side lock so the corner above it stays free for emotes.
-const TAIL = stamp(12, 3, ['.nn.', 'nkn.', '.khk', '.khk', '..khk', '..khk', '..kHk'])
-const TAIL_SWAY = stamp(12, 3, ['.nn.', 'nkn.', '.khk', '..khk', '..khk', '...khk', '...kH'])
+// The ponytail, a bow and a strand tied low behind the right side lock so the corner above it stays free for emotes.
+const TAIL = stamp(12, 3, ['.nn.', 'nnnk', '..hhk', '..hhk', '..khhk', '..khhk', '..kHhk'])
+const TAIL_SWAY = stamp(12, 3, ['.nn.', 'nnnk', '..hhk', '..hhk', '..hhk', '..hhk', '..kHhk'])
 
 const QUESTION = ['yyy', '..y', '.y.', '...', '.y.']
 // The anger vein: four corners about a cross.
@@ -100,16 +100,17 @@ export const chibi: Theme = {
   accent: '#aa77ee',
   onAccent: '#000044',
   palette: {
-    k: 0x331177,
-    h: 0x7744cc,
-    H: 0xaa77ee,
+    k: 0x4411aa,
+    h: 0xaa77ee,
+    d: 0x7744cc,
+    H: 0xccaaff,
     s: 0xffddcc,
     S: 0xddaa77,
     e: 0x441144,
-    i: 0x7744dd,
+    i: 0x33ccdd,
     w: 0xffffff,
     p: 0xffaacc,
-    M: 0x774444,
+    M: 0xdd4477,
     n: 0xff77aa,
     b: 0x77ccff,
     y: 0xffdd44,

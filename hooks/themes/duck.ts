@@ -2,16 +2,16 @@ import { BIG_Z, BLANK, DROP, SMALL_Z, SPARKLE, WIDTH, frame, layer, paint, shift
 import type { Patch } from '../sprite'
 import type { Theme } from '../theme'
 
-// A rubber duck in the bath: a round yellow head, a tuft, a wide orange beak between rosy cheeks, and two rows of water
-// that never keep still. Bubbles rise in columns 14-17.
+// A rubber duck in the bath: a round yellow head with a gold outline, a tuft, a small orange beak between rosy cheeks, and two
+// rows of water that never keep still. Bubbles rise in columns 14-17.
 const FACE = [
-  '.....kyyk.....',
+  '.....khhk.....',
   '...kkYYYYkk...',
-  '..kYssYYYYYk..',
-  '.kYseYYYYseYk.',
-  '.kYeeYYYYeeYk.',
-  '.kppooooooppk.',
-  '..kYYoOOoYYk..',
+  '..kYhYYYYYYk..',
+  '.kYYseYYseYYk.',
+  '.kYYeeYYeeYYk.',
+  '.kppYooooYppk.',
+  '..kDDoOOoDDk..',
   '...kkkkkkkk...',
   '',
   '',
@@ -21,7 +21,7 @@ const FACE = [
 const SQUASHED = ['', ...FACE.slice(0, 2), ...FACE.slice(3)]
 
 // Both eyes at once: their top row, then their bottom row.
-const eyes = (top: string, bottom: string): Patch[] => [[3, 3, top], [9, 3, top], [3, 4, bottom], [9, 4, bottom]]
+const eyes = (top: string, bottom: string): Patch[] => [[4, 3, top], [8, 3, top], [4, 4, bottom], [8, 4, bottom]]
 
 const BLINK = eyes('YY', 'kk')
 // A bead eye looks by where its glint sits.
@@ -30,8 +30,8 @@ const LOOK_RIGHT = eyes('es', 'ee')
 // Eyes gone round and bright, the beak wide open.
 const WIDE: Patch[] = [...eyes('ss', 'se'), [5, 6, 'eeee']]
 // Closed and smiling, ^ ^.
-const HAPPY: Patch[] = [[2, 3, 'YeY'], [2, 4, 'eYe'], [9, 3, 'YeY'], [9, 4, 'eYe']]
-const WORRIED: Patch[] = [[3, 2, 'kk'], [9, 2, 'kk']]
+const HAPPY: Patch[] = [[3, 3, 'YeY'], [3, 4, 'eYe'], [8, 3, 'YeY'], [8, 4, 'eYe']]
+const WORRIED: Patch[] = [[4, 2, 'kk'], [8, 2, 'kk']]
 
 // Shorter than the shared ones: the bath keeps the rows below.
 const QUESTION = ['.yy.', 'y..y', '..y.', '....', '..y.']
@@ -116,8 +116,10 @@ export const duck: Theme = {
   accent: '#ff7711',
   onAccent: '#111111',
   palette: {
-    k: 0xcc7711,
+    k: 0xddaa11,
     Y: 0xffdd44,
+    h: 0xffee77,
+    D: 0xffcc11,
     y: 0xffaa11,
     o: 0xff7711,
     O: 0xcc4411,

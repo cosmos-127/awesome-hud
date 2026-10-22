@@ -2,49 +2,47 @@ import { BIG_Z, BLANK, DROP, SMALL_Z, SPARKLE, frame, layer, paint, shift, stamp
 import type { Patch } from '../sprite'
 import type { Theme } from '../theme'
 
-// A white bunny: tall ears lined in pink, a mauve outline that holds on dark and light terminals alike, tall eyes with a
-// pink glint, a pink nose, blushing cheeks. A carrot stands in columns 14-17 below the emotes.
+// A pale pink bunny: tall ears lined in a deeper pink, a mauve outline that holds on dark and light terminals alike, sky-blue
+// eyes with a glint and a slit pupil, a pink nose over a small w mouth, blushing cheeks. A carrot stands in columns 14-17 below
+// the emotes.
 const FACE = [
   '...kk....kk...',
+  '..kPpk..kpPk..',
   '..kppk..kppk..',
   '..kppk..kppk..',
   '..kppkkkkppk..',
-  '.kwwwwwwwwwwk.',
-  'kwweewwwweewwk',
-  'kwwpewwwwpewwk',
-  'kwweewPPweewwk',
-  'kppwwwwwwwwppk',
+  '.ksiiffffsiik.',
+  'kfieiffffieifk',
+  'kfieifPPfieifk',
+  'kppllellellppk',
   '.kkkkkkkkkkkk.',
 ]
 
-// The ears are the four top rows, whole: a pose replaces them.
+// The ears are the five top rows; a pose replaces as many from the top as it changes.
 const ears = (...rows: string[]): Patch[] => rows.map((row, y) => [0, y, row] as Patch)
 // One ear bent at its tip, the other standing.
-const TWITCH_LEFT = ears('..kk.....kk...', '.kppk...kppk..', '..kppk..kppk..', '..kppkkkkppk..')
-const TWITCH_RIGHT = ears('...kk.....kk..', '..kppk...kppk.', '..kppk..kppk..', '..kppkkkkppk..')
+const TWITCH_LEFT = ears('..kk.....kk...', '.kPpk...kpPk..')
+const TWITCH_RIGHT = ears('...kk.....kk..', '..kPpk...kpPk.')
 // Both tips thrown outward: a thump.
-const SPLAY = ears('..kk......kk..', '.kppk....kppk.', '..kppk..kppk..', '..kppkkkkppk..')
+const SPLAY = ears('..kk......kk..', '.kPpk....kpPk.')
 // Folded over and low, as a lop's are.
-const LOP = ears('..............', '..kkk....kkk..', '.kpppk..kpppk.', '.kpppkkkkpppk.')
+const LOP = ears('..............', '..............', '..kkk....kkk..', '.kpppk..kpppk.', '.kpppkkkkpppk.')
 
-// Both eyes at once, two pixels wide and dx columns along: their rows from y 5, over the open eyes wiped.
-const eyes = (dx: number, ...rows: string[]): Patch[] => [
-  ...rows.flatMap((_, i) => [[3, 5 + i, 'ww'], [9, 5 + i, 'ww']] as Patch[]),
-  ...rows.flatMap((r, i) => [[3 + dx, 5 + i, r], [9 + dx, 5 + i, r]] as Patch[]),
-]
+// Both eyes at once, three pixels wide: their rows from y 5.
+const eyes = (...rows: string[]): Patch[] => rows.flatMap((row, i) => [[2, 5 + i, row], [9, 5 + i, row]] as Patch[])
 
-const BLINK = eyes(0, 'ww', 'ww', 'ee')
-// A bead eye looks by sliding along the face, its pink glint with it.
-const LOOK_LEFT = eyes(-1, 'ee', 'pe', 'ee')
-const LOOK_RIGHT = eyes(1, 'ee', 'pe', 'ee')
-// Eyes gone big, three pixels wide, the mouth a small O.
-const WIDE: Patch[] = [[2, 5, 'eee'], [2, 6, 'epe'], [2, 7, 'eee'], [9, 5, 'eee'], [9, 6, 'epe'], [9, 7, 'eee'], [6, 8, 'ee']]
+const BLINK = eyes('fff', 'fff', 'eee')
+// A slit pupil looks by sliding along the iris, its glint staying put.
+const LOOK_LEFT = eyes('sii', 'eii', 'eii')
+const LOOK_RIGHT = eyes('sii', 'iie', 'iie')
+// Eyes gone big and dark, the mouth a small O.
+const WIDE: Patch[] = [...eyes('eee', 'ese', 'eee'), [5, 8, 'leel']]
 // Closed and smiling, ^ ^.
-const HAPPY: Patch[] = [...eyes(0, 'ww', 'ww', 'ww'), [3, 6, 'e'], [2, 7, 'e'], [4, 7, 'e'], [10, 6, 'e'], [9, 7, 'e'], [11, 7, 'e']]
+const HAPPY = eyes('fff', 'fef', 'efe')
 // Lids half down.
-const TIRED = eyes(0, 'ww', 'pe', 'ee')
+const TIRED = eyes('fff', 'eee', 'iei')
 // The nose, twitching to a single pixel.
-const SNIFF: Patch[] = [[6, 7, 'wP']]
+const SNIFF: Patch[] = [[6, 7, 'fP']]
 
 // Shorter than the shared ones, so the carrot keeps the rows below.
 const QUESTION = ['.yy.', 'y..y', '..y.', '....', '..y.']
@@ -93,17 +91,19 @@ const moods: Theme['moods'] = {
 }
 
 export const bunny: Theme = {
-  description: 'a white bunny with expressive ears and a carrot',
+  description: 'a pale pink bunny with expressive ears and a carrot',
   sounds: { done: 'sounds/bunny/done.wav', error: 'sounds/bunny/error.wav', waiting: 'sounds/bunny/waiting.wav', party: 'sounds/bunny/party.wav' },
   accent: '#44dd44',
   onAccent: '#111111',
   palette: {
     k: 0xaa77aa,
-    w: 0xffffff,
-    l: 0xddccee,
+    f: 0xffddee,
+    l: 0xddccff,
     p: 0xffaacc,
     P: 0xff77aa,
-    e: 0x222222,
+    e: 0x441144,
+    i: 0x44aaff,
+    s: 0xffffff,
     o: 0xff7711,
     O: 0xcc4411,
     v: 0x44dd44,

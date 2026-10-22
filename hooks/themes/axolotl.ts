@@ -2,19 +2,19 @@ import { BIG_Z, DROP, SMALL_Z, SPARKLE, frame, paint, shift, stamp } from '../sp
 import type { Patch } from '../sprite'
 import type { Theme } from '../theme'
 
-// A pink axolotl: big dark eyes, blushing cheeks, a wide smile, and frilled gills fanned off each side. Seaweed sways in
-// columns 14-17 below the emotes.
+// A pink axolotl: bead eyes with a glint, blushing cheeks, a wide smile, and three gill fronds fanned off each side. Seaweed
+// sways in columns 14-17 below the emotes.
 const FACE = [
-  'rr..........rr',
-  'GGr........rGG',
-  'rGGkkkkkkkkGGr',
-  '.GGkaaaaaakGG.',
-  'rGkseaaaasekGr',
+  'G..G......G..G',
+  'GG.GG....GG.GG',
+  '.GGGG....GGGG.',
+  '.GGkkkkkkkkGG.',
+  'GGkseawwasekGG',
   '.GkeeaaaaeekG.',
-  '..kPakaakaPk..',
-  '..kaaakkaaak..',
-  '..kaaaaaaaak..',
-  '...kkkkkkkk...',
+  '.kPPkaaaakPPk.',
+  '.kaaakkkkaaak.',
+  '.kAAAAAAAAAAk.',
+  '..kkkkkkkkkk..',
 ]
 
 // Both eyes at once: their top row, then their bottom row.
@@ -24,19 +24,19 @@ const BLINK = eyes('aa', 'kk')
 // A bead eye looks by where its glint sits.
 const LOOK_LEFT = eyes('se', 'ee')
 const LOOK_RIGHT = eyes('es', 'ee')
-// Eyes gone round and white, the mouth a round O.
-const WIDE: Patch[] = [...eyes('ss', 'se'), [5, 6, 'a'], [8, 6, 'a'], [6, 6, 'kk'], [6, 7, 'kk']]
-// Closed and smiling, ^ ^, each a pixel wider than the eye.
-const HAPPY: Patch[] = [...eyes('aa', 'aa'), [4, 4, 'k'], [3, 5, 'k'], [5, 5, 'k'], [9, 4, 'k'], [8, 5, 'k'], [10, 5, 'k']]
-const WORRIED: Patch[] = [[4, 3, 'k'], [9, 3, 'k']]
+// Eyes gone round and dark, three rows tall, the mouth a round O.
+const WIDE: Patch[] = [...eyes('ee', 'se'), [3, 6, 'ee'], [9, 6, 'ee'], [6, 6, 'kk'], [5, 7, 'a'], [8, 7, 'a']]
+// Closed and smiling, ^ ^.
+const HAPPY: Patch[] = [...eyes('aa', 'aa'), [4, 4, 'e'], [3, 5, 'e'], [5, 5, 'e'], [9, 4, 'e'], [8, 5, 'e'], [10, 5, 'e']]
+const WORRIED: Patch[] = [[3, 4, 'k'], [9, 4, 'ek']]
 // The smile gone to a wobble.
-const WOBBLE: Patch[] = [[5, 6, 'akak'], [6, 7, 'aa']]
+const WOBBLE: Patch[] = [[4, 6, 'aakaka'], [5, 7, 'kaka']]
 
-// The gills at rest stand up; down, the top fronds have dropped a row.
-const GILLS_DOWN: Patch[] = [[0, 0, '..'], [0, 1, 'rrG'], [0, 4, '.'], [0, 5, 'r'], [12, 0, '..'], [11, 1, 'Grr'], [13, 4, '.'], [13, 5, 'r']]
-// A gill lost: the left top frond gone, then a stub of it, then grown back.
-const GILL_GONE: Patch[] = [[0, 0, '...'], [0, 1, '...'], [0, 2, '...'], [0, 3, '...']]
-const GILL_STUB: Patch[] = [...GILL_GONE, [1, 3, 'rG']]
+// The gills at rest stand up; down, each frond has dropped a row.
+const GILLS_DOWN: Patch[] = [[0, 0, '..............'], [0, 1, 'G..G......G..G'], [0, 2, 'GG.GG....GG.GG']]
+// A gill lost: the left one gone, then a stub of it, then grown back.
+const GILL_STUB: Patch[] = [[0, 0, '....'], [0, 1, '.....'], [3, 2, '..']]
+const GILL_GONE: Patch[] = [...GILL_STUB, [1, 2, '..'], [1, 3, '..']]
 
 // Shorter than the shared ones, so the seaweed keeps the rows below.
 const QUESTION = ['.yy.', 'y..y', '..y.', '....', '..y.']
@@ -94,11 +94,13 @@ export const axolotl: Theme = {
   onAccent: '#441144',
   palette: {
     k: 0xcc4477,
-    a: 0xffaacc,
-    G: 0xff77aa,
+    a: 0xffccdd,
+    A: 0xffaacc,
+    G: 0xff4477,
     P: 0xff77aa,
-    e: 0x222222,
+    e: 0x441144,
     s: 0xffffff,
+    w: 0xffeeff,
     v: 0x44dd44,
     V: 0x117711,
     y: 0xffaa11,
