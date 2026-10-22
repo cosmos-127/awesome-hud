@@ -41,9 +41,18 @@ export const frame = (px: string[], ms: number): Frame => ({ px, ms })
 
 const DEFAULT = 0x01000000
 
+/**
+ * Whether the terminal draws half blocks from its font, not itself. Apple Terminal does, and its font sets them low
+ * in the line: in its screenshots `▀` starts 16% and 22% of the way down a cell (two font sizes) and `▄` ends at the foot.
+ */
+export const isFontBlocks = (env: { TERM_PROGRAM?: string }): boolean => env.TERM_PROGRAM === 'Apple_Terminal'
+
 // One frame as Raster cells: `▀` with the top pixel as foreground and the
 // bottom pixel as background, `▄` where only the bottom one is painted.
-export const encode = (px: readonly string[], palette: Readonly<Record<string, number>>): string => {
+// With `isLow`, for a font that sets its blocks low, `▄` carries the pair instead, the bottom pixel as foreground:
+// `▀` there leaves a strip of the bottom pixel's color above the top one, pixels merged into the row above, where `▄`
+// is off only in where it splits the cell. A terminal that draws blocks itself draws both alike.
+export const encode = (px: readonly string[], palette: Readonly<Record<string, number>>, isLow = false): string => {
   const color = (p: string) => (p === '.' ? undefined : palette[p])
   const words: number[] = []
   for (let y = 0; y < px.length; y += 2) {
@@ -52,7 +61,10 @@ export const encode = (px: readonly string[], palette: Readonly<Record<string, n
       const bottom = color(px[y + 1]![x]!)
       if (top === undefined && bottom === undefined) words.push(0x20, DEFAULT, DEFAULT)
       else if (top === undefined) words.push(0x2584, bottom!, DEFAULT)
-      else words.push(0x2580, top, bottom ?? DEFAULT)
+      else if (bottom === undefined) words.push(0x2580, top, DEFAULT)
+      else if (!isLow) words.push(0x2580, top, bottom)
+      else if (top === bottom) words.push(0x20, DEFAULT, top)
+      else words.push(0x2584, bottom, top)
     }
   }
   // toBase64 is in the runtime (ES2026), not yet in TypeScript's lib

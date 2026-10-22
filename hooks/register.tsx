@@ -10,7 +10,7 @@ import {
 } from './format'
 import type { GitOperation, GitStatus, Run, Segment } from './format'
 import { play } from './sound'
-import { encode, HEIGHT, WIDTH } from './sprite'
+import { encode, HEIGHT, isFontBlocks, WIDTH } from './sprite'
 import { asciiFace, isUnicodeTerminal, sym, useSymbols } from './symbols'
 import type { PartyCause, SoundEvent } from './theme'
 import type { Theme } from './theme'
@@ -90,6 +90,8 @@ let isCompact = false
 let isPrStatus = false
 // The `symbols` option: auto asks the terminal, unicode and ascii decide for it.
 let symbolMode = 'auto'
+// Whether the terminal draws half blocks from its font, so the sprite is drawn with the half block its font gets right.
+let isLowBlocks = false
 let current: Mood = 'idle'
 let hot = false
 let isTurning = false
@@ -116,15 +118,16 @@ let gitSoon: Timer | undefined
 let prRun: Promise<void> | undefined
 let isPrAgain = false
 
-// By theme, then mood and frame: two themes may share an accent, a palette or frames.
+// By theme, then block style, mood and frame: two themes may share an accent, a palette or frames.
 const encoded = new Map<Theme, Map<string, string>>()
 const cellsAt = (m: Mood, i: number) => {
   const frames = theme.moods[m]
   const n = i % frames.length
   let byFrame = encoded.get(theme)
   if (byFrame === undefined) encoded.set(theme, (byFrame = new Map()))
-  let cells = byFrame.get(`${m}:${n}`)
-  if (cells === undefined) byFrame.set(`${m}:${n}`, (cells = encode(frames[n]!.px, theme.palette)))
+  const key = `${isLowBlocks ? 'low' : 'half'}:${m}:${n}`
+  let cells = byFrame.get(key)
+  if (cells === undefined) byFrame.set(key, (cells = encode(frames[n]!.px, theme.palette, isLowBlocks)))
   return cells
 }
 
@@ -685,6 +688,7 @@ export const register: Register = (on, options) => {
     theme = themeOf(configured)
     const isAscii = await needsAscii($)
     await update($, ascii, () => isAscii)
+    isLowBlocks = isFontBlocks({ TERM_PROGRAM: await $.env.get('TERM_PROGRAM').catch(() => undefined) })
 
     // A usage that fails to read leaves the meter for session.measure: the rest of the setup must still run.
     const usage = await $.session.usage().catch(() => undefined)
@@ -961,7 +965,7 @@ export const register: Register = (on, options) => {
       <Box flexDirection="column">
         {await next(e)}
         <Box paddingLeft={5}>
-          <Raster key="portrait" columns={WIDTH * 2} rows={HEIGHT} cells={encode(twice(t.moods.idle[0]!.px), t.palette)} />
+          <Raster key="portrait" columns={WIDTH * 2} rows={HEIGHT} cells={encode(twice(t.moods.idle[0]!.px), t.palette, isLowBlocks)} />
         </Box>
       </Box>
     )

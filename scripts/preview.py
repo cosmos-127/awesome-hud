@@ -222,7 +222,11 @@ def card(themes):
     x, y = cx - tw / 2, top + 10 * scale + 36
     d.text((x, y), '❯ ', fill=DIM, font=prompt)
     d.text((x + d.textlength('❯ ', font=prompt), y), label, fill=FG, font=mono)
-    d.text((cx - d.textlength('» ' + theme['quips']['idle'][0], font=mono) / 2, y + 36), '» ' + theme['quips']['idle'][0], fill=DIM, font=mono)
+    quip, size = '» ' + theme['quips']['idle'][0], 24
+    while size > 14 and d.textlength(quip, font=ImageFont.truetype(FONT, size)) > w - split - 48:
+        size -= 1
+    small = ImageFont.truetype(FONT, size)
+    d.text((cx - d.textlength(quip, font=small) / 2, y + 36), quip, fill=DIM, font=small)
 
     tile, gap = 2, 4
     row_w = len(themes) * (18 * tile + 8) + (len(themes) - 1) * gap
