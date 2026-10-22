@@ -14,7 +14,7 @@ body:
     attributes:
       label: awesome-hud version
       description: Shown in `/plugin`.
-      placeholder: 0.4.1
+      placeholder: 0.4.2
     validations:
       required: true
   - type: input

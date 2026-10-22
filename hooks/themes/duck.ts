@@ -159,10 +159,10 @@ export const duck: Theme = {
     asleep: ['asleep with one eye open', 'dreaming of clean diffs', 'asleep, but still listening', 'floating off'],
   },
   party: {
-    tests: 'tests green! quack!',
+    tests: 'tests green! the duck was not needed',
     commit: 'committed! explained and shipped',
     push: 'pushed! the duck approves',
-    summoned: 'quack? you called?',
+    summoned: 'quack. I am not a cat. I came anyway',
   },
   verbs: {
     Read: 'listening to {}',
@@ -181,14 +181,14 @@ export const duck: Theme = {
     default: 'pecking at {}',
   },
   spinner: {
-    thinking: ['Listening', 'Nodding along', 'Floating thoughtfully', 'Paddling', 'Quietly judging'],
+    thinking: ['Nodding along', 'Floating thoughtfully', 'Quietly judging', 'Pretending to understand'],
     requesting: ['Quacking at the server', 'Splashing the API'],
-    responding: ['Quacking it out', 'Explaining right back', 'Squeaking'],
+    responding: ['Quacking it out', 'Explaining right back', 'Taking credit'],
     'tool-input': ['Preening', 'Shaking off water'],
-    'tool-use': ['Dabbling', 'Pecking', 'Paddling'],
+    'tool-use': ['Dabbling', 'Pecking', 'Waddling'],
   },
   turn: {
-    plain: ['Quacked', 'Paddled', 'Listened', 'Floated', 'Dabbled', 'Preened', 'Bobbed', 'Splashed'],
+    plain: ['Quacked', 'Listened', 'Dabbled', 'Preened', 'Bobbed', 'Splashed', 'Judged your variables', 'Took the credit'],
     errors: n => `Sank ${n} time${n === 1 ? '' : 's'}, bobbed back up`,
     party: 'Splashed around',
   },

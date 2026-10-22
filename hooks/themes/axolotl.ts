@@ -131,10 +131,10 @@ export const axolotl: Theme = {
     asleep: ['asleep. or smiling. hard to tell', 'asleep. regrowing in the background', 'dreaming of bubbles', 'drifting in the tank'],
   },
   party: {
-    tests: 'tests green! blup blup!',
+    tests: 'tests green! all limbs intact',
     commit: 'committed! it will grow back anyway',
     push: 'pushed! swim free',
-    summoned: 'blup? you called?',
+    summoned: 'blup? a cat? I am underwater. safe',
   },
   verbs: {
     Read: 'gazing at {}',
@@ -156,7 +156,7 @@ export const axolotl: Theme = {
     thinking: ['Floating', 'Blowing bubbles', 'Wiggling', 'Smiling thoughtfully', 'Regenerating'],
     requesting: ['Blupping at the server', 'Bubbling the API'],
     responding: ['Blowing a reply', 'Wiggling it out', 'Bubbling'],
-    'tool-input': ['Fanning gills', 'Stretching'],
+    'tool-input': ['Fanning gills', 'Regrowing a toe'],
     'tool-use': ['Paddling', 'Nosing around', 'Sifting sand'],
   },
   turn: {

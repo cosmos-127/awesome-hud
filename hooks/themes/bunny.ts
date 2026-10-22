@@ -135,12 +135,12 @@ export const bunny: Theme = {
   },
   party: {
     tests: 'tests green! binky!',
-    commit: 'committed! carrot please',
+    commit: 'committed! it is in the burrow now',
     push: 'pushed! hop hop hooray',
-    summoned: 'nose twitch? you called?',
+    summoned: 'thump! a cat? warning the burrow',
   },
   verbs: {
-    Read: 'sniffing {}',
+    Read: 'twitching nose at {}',
     Edit: 'nibbling {}',
     MultiEdit: 'nibbling {}',
     NotebookEdit: 'nibbling {}',
@@ -163,7 +163,7 @@ export const bunny: Theme = {
     'tool-use': ['Hopping', 'Digging', 'Foraging'],
   },
   turn: {
-    plain: ['Hopped', 'Munched', 'Loafed', 'Foraged', 'Binkied', 'Flopped', 'Nibbled', 'Dug'],
+    plain: ['Hopped', 'Munched', 'Became a loaf', 'Binkied', 'Flopped', 'Dug', 'Thumped at nothing', 'Twitched'],
     errors: n => `Thumped ${n} time${n === 1 ? '' : 's'}, then hid`,
     party: 'Binkied',
   },

@@ -188,8 +188,8 @@ export const cat: Theme = {
   party: {
     tests: 'tests green! zoomies!',
     commit: 'committed! treat please',
-    push: 'pushed! the cat has shipped',
-    summoned: 'mrrp? you called?',
+    push: 'pushed! knocked it off the table',
+    summoned: 'mrrp. I was coming anyway',
   },
   verbs: {
     Read: 'sniffing {}',

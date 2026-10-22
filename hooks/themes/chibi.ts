@@ -178,10 +178,10 @@ export const chibi: Theme = {
     ],
   },
   party: {
-    tests: 'tests green! bankai!',
+    tests: 'tests green! tournament arc: won',
     commit: 'committed! character development',
     push: 'pushed! the saga continues',
-    summoned: 'hai? you called?',
+    summoned: 'is this the cat-summoning arc?',
   },
   verbs: {
     Read: 'studying {}',
