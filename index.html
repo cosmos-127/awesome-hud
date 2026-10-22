@@ -431,11 +431,11 @@ tbody tr:nth-child(odd) td code { background: var(--bg); }
           <ul class="moods" aria-label="Moods" data-stagger>
             <li><button class="mood" type="button" data-mood="idle" aria-pressed="true"><span class="m">idle</span><span class="w">Waiting for a prompt.</span></button></li>
             <li><button class="mood" type="button" data-mood="working" aria-pressed="false"><span class="m">working</span><span class="w">Claude is working.</span></button></li>
-            <li><button class="mood" type="button" data-mood="waiting" aria-pressed="false"><span class="m">waiting</span><span class="w">Claude needs permission or an answer.</span></button></li>
-            <li><button class="mood" type="button" data-mood="error" aria-pressed="false"><span class="m">error</span><span class="w">A tool fails or the turn ends with an error.</span></button></li>
+            <li><button class="mood" type="button" data-mood="waiting" aria-pressed="false"><span class="m">waiting</span><span class="w">Claude needs permission or asks you a question.</span></button></li>
+            <li><button class="mood" type="button" data-mood="error" aria-pressed="false"><span class="m">error</span><span class="w">A tool or a test run fails, or the turn ends with an error.</span></button></li>
             <li><button class="mood" type="button" data-mood="done" aria-pressed="false"><span class="m">done</span><span class="w">Claude finishes a turn.</span></button></li>
             <li><button class="mood" type="button" data-mood="party" aria-pressed="false"><span class="m">party</span><span class="w">Tests pass, a commit or push completes, or you type <code>pspsps</code>.</span></button></li>
-            <li><button class="mood" type="button" data-mood="sweat" aria-pressed="false"><span class="m">sweat</span><span class="w">Context reaches 85% or a plan limit reaches 90%.</span></button></li>
+            <li><button class="mood" type="button" data-mood="sweat" aria-pressed="false"><span class="m">sweat</span><span class="w">Context reaches 85% or a plan limit reaches 90%. Shown in place of idle and done.</span></button></li>
             <li><button class="mood" type="button" data-mood="asleep" aria-pressed="false"><span class="m">asleep</span><span class="w">Sleeps after five quiet minutes.</span></button></li>
           </ul>
         </div>
@@ -462,11 +462,11 @@ tbody tr:nth-child(odd) td code { background: var(--bg); }
       </figure>
 
       <ol class="rows" data-stagger>
-          <li>Model, effort, project folder, session time, and cost.</li>
-          <li>Context usage and the auto-compact threshold.</li>
+          <li>Model, effort, project folder (and worktree), session time, and cost.</li>
+          <li>Context usage and the auto-compact threshold. From 70% full, what takes the most of it.</li>
           <li>Five-hour and weekly plan usage, with the reset time.</li>
           <li>Git state, session edits, test results, and pull request status.</li>
-          <li>A status line with the current file or command, or a notice such as failing tests or merge conflicts.</li>
+          <li>A status line with the current file or command. At rest, what needs you: failing tests, a stopped rebase or merge, or agents that failed or are still at work.</li>
         </ol>
 
       <table data-reveal>
@@ -477,7 +477,7 @@ tbody tr:nth-child(odd) td code { background: var(--bg); }
           <tr><td><code>● 3  ✚ 5  ? 1 new</code></td><td>Staged, changed, and untracked files. A clean tree shows <code>✓ clean</code>; conflicts are highlighted.</td></tr><!-- taste-skill-ignore -->
           <tr><td><code>≡ 1 stash</code></td><td>Number of Git stashes.</td></tr>
           <tr><td><code>✎ 4 files +120 −34</code></td><td>Files Claude edited this session and lines added or removed.</td></tr><!-- taste-skill-ignore -->
-          <tr><td><code>✓ 24 passed (3m ago)</code></td><td>Latest test result and age; marked stale after a later edit.</td></tr><!-- taste-skill-ignore -->
+          <tr><td><code>✓ 24 passed (3m ago)</code></td><td>Latest test result and age; marked stale after a later edit. A repeat run that still fails says what it failed before.</td></tr><!-- taste-skill-ignore -->
           <tr><td><code>PR #42</code></td><td>Pull request for this branch; checks and review appear with <strong>PR status</strong> enabled.</td></tr>
         </tbody>
       </table>
@@ -492,6 +492,7 @@ tbody tr:nth-child(odd) td code { background: var(--bg); }
         <div class="prose a7-12" data-stagger>
           <p>Run either command above, then start a new session, or run <code>/reload-plugins</code> in an open one. The HUD appears below the prompt.</p>
           <p>It runs in terminal sessions, not in the Claude Code desktop app. It needs Claude Code 2.1.287 or later (it is tested on 2.1.308), and it uses Claude Code's early-access mods API, which may change.</p>
+          <p>To update, run <code>claude plugin marketplace update awesome-hud</code>, then <code>claude plugin update awesome-hud@awesome-hud</code>, and restart or run <code>/reload-plugins</code>. Or turn on auto-update for this marketplace in the Marketplaces tab of <code>/plugin</code>.</p>
         </div>
       </div>
       <h3 data-reveal>Using it</h3>
@@ -519,7 +520,7 @@ tbody tr:nth-child(odd) td code { background: var(--bg); }
           <tr><td>Position</td><td><code>below</code></td><td>Show the HUD below or above the prompt.</td></tr>
           <tr><td>Layout</td><td><code>full</code></td><td>Show the mascot and stats, or use <code>compact</code> for stats only.</td></tr>
           <tr><td>Symbols</td><td><code>auto</code></td><td>Detect Unicode support, or choose <code>unicode</code> or <code>ascii</code>.</td></tr>
-          <tr><td>Sounds</td><td>off</td><td>Play theme sounds on errors, permission requests, parties, and turns that last at least 30 seconds.</td></tr>
+          <tr><td>Sounds</td><td>off</td><td>Play theme sounds on errors, permission requests and questions, parties, and turns that last at least 30 seconds.</td></tr>
           <tr><td>Session cost</td><td><code>auto</code></td><td>Show cost when billed per token; hide it on Pro or Max plans.</td></tr>
           <tr><td>Themed words</td><td>on</td><td>Use theme text in the spinner, turn summary, and event toasts.</td></tr>
           <tr><td>PR status</td><td>off</td><td>Use <code>gh pr view</code> to show pull request checks and review. This is the only feature that uses the network.</td></tr>
@@ -550,7 +551,7 @@ tbody tr:nth-child(odd) td code { background: var(--bg); }
       <div class="grid">
         <h2 id="make-h" class="a1-6" data-reveal>Make a theme</h2>
         <div class="a7-12" data-reveal style="--i:1">
-          <p>A theme is a file in <code>hooks/themes/</code> and four WAV files. Draw an 18 × 10 sprite, define eight moods, add the words, register it, and run <code>claude plugin test .</code>.</p>
+          <p>A theme is a file in <code>hooks/themes/</code> and four WAV files. Draw an 18 × 10 sprite, define eight moods, add the words, register it, run <code>claude plugin test .</code>, then <code>python3 scripts/site.py</code> to put it on this page.</p>
           <div class="actions">
             <a class="btn" href="https://github.com/cosmos-127/awesome-hud#make-a-theme">The steps, in the README</a>
             <a class="btn" href="https://github.com/cosmos-127/awesome-hud/blob/main/CONTRIBUTING.md">What a pull request needs</a>
